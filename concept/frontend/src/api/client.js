@@ -35,24 +35,30 @@ export async function apiFetch(path, options = {}) {
 // ——— Auth endpoints (MOCKED FOR DEMO) ———
 export const authApi = {
   login: async (email, password) => {
+    // Simulated network delay
     await new Promise(r => setTimeout(r, 500));
+    
+    // Accept any email/password for the demo, just assign a default role if none selected
+    // In a real app this would call: apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
     return {
       token: 'demo-jwt-token-12345',
       user: {
         id: 1,
         name: 'Demo User',
         email: email,
-        role: 'fleet_manager' // default to fleet_manager so you can see everything
+        role: 'fleet_manager' // We will default to fleet_manager so you can see everything
       }
     };
   },
 
-  signup: async (name, email, password, role) => {
-    await new Promise(r => setTimeout(r, 500));
-    return { token: 'demo', user: { id: 1, name, email, role } };
-  },
+  signup: (name, email, password, role) =>
+    apiFetch('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password, role }),
+    }),
 
   me: async () => {
+    // Simulated network delay
     await new Promise(r => setTimeout(r, 300));
     return {
       id: 1,
