@@ -1,0 +1,118 @@
+/**
+ * api/client.js — Shared API layer
+ * All API calls go through apiFetch. Never use raw fetch() outside this file.
+ * Token stored in sessionStorage (not localStorage — per authentication-signin.md §6).
+ */
+
+const BASE_URL = '/api/v1';
+
+export async function apiFetch(path, options = {}) {
+  const token = sessionStorage.getItem('token');
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+
+  const json = await res.json();
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      // Clear session and redirect to login on any 401
+      sessionStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    throw new Error(json.error?.message || 'Request failed');
+  }
+
+  return json.data; // unwrap envelope
+}
+
+// ——— Auth endpoints ———
+export const authApi = {
+  login: (email, password) =>
+    apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+
+  signup: (name, email, password, role) =>
+    apiFetch('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password, role }),
+    }),
+
+  me: () => apiFetch('/auth/me'),
+};
+
+// ——— Dashboard ———
+export const dashboardApi = {
+  get: (params = {}) =>
+    apiFetch('/dashboard?' + new URLSearchParams(params)),
+};
+
+// ——— Vehicles ———
+export const vehiclesApi = {
+  list:         (params = {}) => apiFetch('/vehicles?' + new URLSearchParams(params)),
+  dispatchPool: ()             => apiFetch('/vehicles/dispatch-pool'),
+  get:          (id)           => apiFetch(`/vehicles/${id}`),
+  create:       (body)         => apiFetch('/vehicles',     { method: 'POST',  body: JSON.stringify(body) }),
+  update:       (id, body)     => apiFetch(`/vehicles/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  delete:       (id)           => apiFetch(`/vehicles/${id}`, { method: 'DELETE' }),
+};
+
+// ——— Drivers ———
+export const driversApi = {
+  list:         (params = {}) => apiFetch('/drivers?' + new URLSearchParams(params)),
+  dispatchPool: ()             => apiFetch('/drivers/dispatch-pool'),
+  get:          (id)           => apiFetch(`/drivers/${id}`),
+  create:       (body)         => apiFetch('/drivers',     { method: 'POST',  body: JSON.stringify(body) }),
+  update:       (id, body)     => apiFetch(`/drivers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+};
+
+// ——— Trips ———
+export const tripsApi = {
+  list:     (params = {}) => apiFetch('/trips?' + new URLSearchParams(params)),
+  get:      (id)          => apiFetch(`/trips/${id}`),
+  create:   (body)        => apiFetch('/trips',           { method: 'POST',   body: JSON.stringify(body) }),
+  dispatch: (id)          => apiFetch(`/trips/${id}/dispatch`, { method: 'POST' }),
+  complete: (id)          => apiFetch(`/trips/${id}/complete`, { method: 'POST' }),
+  cancel:   (id)          => apiFetch(`/trips/${id}/cancel`,   { method: 'POST' }),
+};
+
+// ——— Maintenance ———
+export const maintenanceApi = {
+  list:   (params = {}) => apiFetch('/maintenance?' + new URLSearchParams(params)),
+  create: (body)        => apiFetch('/maintenance', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body)    => apiFetch(`/maintenance/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+};
+
+// ——— Fuel & Expenses ———
+export const fuelApi = {
+  listLogs:     (params = {}) => apiFetch('/fuel-logs?' + new URLSearchParams(params)),
+  createLog:    (body)        => apiFetch('/fuel-logs',   { method: 'POST', body: JSON.stringify(body) }),
+  listExpenses: (params = {}) => apiFetch('/expenses?'  + new URLSearchParams(params)),
+  createExpense:(body)        => apiFetch('/expenses',    { method: 'POST', body: JSON.stringify(body) }),
+  totalCost:    ()            => apiFetch('/expenses/total-cost'),
+};
+
+// ——— Reports ———
+export const reportsApi = {
+  get: () => apiFetch('/reports'),
+};
+
+// ——— Settings ———
+export const settingsApi = {
+  get:    ()     => apiFetch('/settings'),
+  update: (body) => apiFetch('/settings', { method: 'PUT', body: JSON.stringify(body) }),
+};
+
+// ——— Tracking ———
+export const trackingApi = {
+  getActive: () => apiFetch('/tracking/active'),
+  update:    (body) => apiFetch('/tracking', { method: 'POST', body: JSON.stringify(body) })
+};
