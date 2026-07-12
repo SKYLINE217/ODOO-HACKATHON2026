@@ -192,9 +192,13 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="login-form-footer">
+          <div className="login-form-footer" style={{ marginTop: 24 }}>
             Access is granted by your Fleet Manager.<br />
             Contact your admin if you cannot sign in.
+          </div>
+
+          <div className="login-form-footer" style={{ marginTop: 24 }}>
+            Don't have an account? <Link to="/signup" style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>Sign Up</Link>
           </div>
         </div>
       </div>

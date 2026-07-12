@@ -51,11 +51,16 @@ export const authApi = {
     };
   },
 
-  signup: (name, email, password, role) =>
-    apiFetch('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password, role }),
-    }),
+  signup: async (name, email, password, role) => {
+    // Simulated network delay
+    await new Promise(r => setTimeout(r, 500));
+    return {
+      id: Math.floor(Math.random() * 1000),
+      name,
+      email,
+      role
+    };
+  },
 
   me: async () => {
     // Simulated network delay

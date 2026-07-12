@@ -15,6 +15,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
 import Login       from './pages/Login';
+import Signup      from './pages/Signup';
 import Dashboard   from './pages/Dashboard';
 import Vehicles    from './pages/Vehicles';
 import Drivers     from './pages/Drivers';
@@ -33,6 +34,7 @@ export default function App() {
         <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
 
           {/* Authenticated shell */}
           <Route
