@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — TransitOps</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <!-- Left Branding Panel -->
+    <div class="auth-branding">
+      <div class="brand-logo">
+        <div class="brand-icon">TO</div>
+      </div>
+      <h1 class="brand-title">Transit<span>Ops</span></h1>
+      <p class="brand-tagline">Smart Transport Operations Platform</p>
+      
+      <div class="role-info">
+        <strong>Testing Roles:</strong><br>
+        • Fleet Manager: Dispatch, Maintenance, Expenses<br>
+        • Driver: View assigned trips, Log fuel<br>
+        • Safety Officer: Driver compliance & status<br>
+        • Financial Analyst: Reports, ROI, Expenses
+      </div>
+    </div>
+
+    <!-- Right Form Panel -->
+    <div class="auth-form-panel">
+      <div class="auth-form-wrapper">
+        <div class="auth-form-header">
+          <h1>Welcome Back</h1>
+          <p>Sign in to your TransitOps account.</p>
+        </div>
+
+        <form id="loginForm" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="email">Work Email</label>
+            <input type="email" id="email" class="form-input" placeholder="name@transitops.com" autocomplete="email">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="password" class="form-input" placeholder="Enter your password" autocomplete="current-password">
+              <button type="button" class="password-toggle" id="togglePassword">👁</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">
+            <span class="spinner"></span>
+            <span class="btn-text">Sign In</span>
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Don't have an account? <a href="index.html">Sign Up</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

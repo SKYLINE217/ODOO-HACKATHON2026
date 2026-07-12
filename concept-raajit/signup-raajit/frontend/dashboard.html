@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — TransitOps</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  
+  <div class="dashboard-container">
+    
+    <!-- Topbar -->
+    <header class="dashboard-topbar">
+      <div class="topbar-brand">
+        <div class="topbar-logo">TO</div>
+        <div class="topbar-title">Transit<span>Ops</span></div>
+      </div>
+      
+      <div class="topbar-user">
+        <div class="role-badge" id="userRole">Loading...</div>
+        <div class="user-name" id="userName">User</div>
+        <div class="user-avatar" id="userAvatar">U</div>
+        <button id="logoutBtn" class="btn-logout">Logout</button>
+      </div>
+    </header>
+
+    <!-- Loading State -->
+    <div id="loadingScreen" class="loading-screen">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading profile data...</div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <main id="dashboardContent" class="dashboard-content" style="display: none;">
+      
+      <div class="welcome-card">
+        <h2>Welcome back, <span id="welcomeName">User</span>!</h2>
+        <p class="welcome-subtitle">Here is your account information retrieved securely from the backend.</p>
+        
+        <div class="divider">Profile Details</div>
+        
+        <div class="user-info-grid">
+          <div class="info-card">
+            <div class="info-card-label">Full Name</div>
+            <div class="info-card-value" id="infoName">--</div>
+          </div>
+          
+          <div class="info-card">
+            <div class="info-card-label">Email Address</div>
+            <div class="info-card-value" id="infoEmail">--</div>
+          </div>
+          
+          <div class="info-card">
+            <div class="info-card-label">Assigned Role</div>
+            <div class="info-card-value" id="infoRole">--</div>
+          </div>
+          
+          <div class="info-card">
+            <div class="info-card-label">Member Since</div>
+            <div class="info-card-value" id="infoJoined">--</div>
+          </div>
+        </div>
+      </div>
+      
+    </main>
+
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
