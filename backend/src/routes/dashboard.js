@@ -23,8 +23,8 @@ router.get('/vehicles', requireRole(['fleet_manager', 'dispatcher', 'financial_a
 router.post('/vehicles', requireRole(['fleet_manager']), ctrl.createVehicle);
 router.put('/vehicles/:id', requireRole(['fleet_manager']), ctrl.updateVehicle);
 
-// ── Drivers (Fleet Manager ✓, Safety Officer ✓) ──────────────────
-router.get('/drivers', requireRole(['fleet_manager', 'safety_officer']), ctrl.getDrivers);
+// ── Drivers (Fleet Manager ✓, Safety Officer ✓, Dispatcher view for trips) ──────────────────
+router.get('/drivers', requireRole(['fleet_manager', 'safety_officer', 'dispatcher']), ctrl.getDrivers);
 router.post('/drivers', requireRole(['fleet_manager', 'safety_officer']), ctrl.createDriver);
 router.put('/drivers/:id/status', requireRole(['fleet_manager', 'safety_officer']), ctrl.updateDriverStatus);
 
