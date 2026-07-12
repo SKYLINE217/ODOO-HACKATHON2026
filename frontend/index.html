@@ -64,6 +64,25 @@
           </div>
 
           <div class="form-group">
+            <label class="form-label" for="license_no">Driver License Number</label>
+            <input type="text" id="license_no" class="form-input" placeholder="DL-XXXXXXXXX">
+            <div id="licenseError" class="form-error"></div>
+          </div>
+
+          <div class="form-row" style="display: flex; gap: 1rem;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="vehicle_name">Vehicle Name/Model</label>
+              <input type="text" id="vehicle_name" class="form-input" placeholder="e.g. Tata Ace">
+              <div id="vehicleNameError" class="form-error"></div>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="vehicle_no">Vehicle Reg. No.</label>
+              <input type="text" id="vehicle_no" class="form-input" placeholder="e.g. MH-01-AB-1234">
+              <div id="vehicleNoError" class="form-error"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
             <label class="form-label" for="password">Password</label>
             <div class="password-wrapper">
               <input type="password" id="password" class="form-input" placeholder="8+ characters" autocomplete="new-password">

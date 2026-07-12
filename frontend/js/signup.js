@@ -79,6 +79,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
     const role = document.getElementById('role').value;
+    
+    const license_no = document.getElementById('license_no').value.trim();
+    const vehicle_name = document.getElementById('vehicle_name').value.trim();
+    const vehicle_no = document.getElementById('vehicle_no').value.trim();
 
     let hasError = false;
 
@@ -93,6 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
       hasError = true;
     }
     
+    if (!license_no) {
+      showError('license_no', 'License number is required');
+      hasError = true;
+    }
+
     if (password.length < 8) {
       showError('password', 'Password must be at least 8 characters');
       hasError = true;
@@ -113,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await apiFetch('/auth/signup', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password, role })
+        body: JSON.stringify({ name, email, password, role, license_no, vehicle_name, vehicle_no })
       });
       
       showToast('Account created successfully! Please sign in.', 'success');

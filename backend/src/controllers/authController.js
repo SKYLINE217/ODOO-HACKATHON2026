@@ -23,13 +23,13 @@ const VALID_ROLES = ['fleet_manager', 'driver', 'safety_officer', 'financial_ana
 // ─────────────────────────────────────────────────────────────
 async function signup(req, res) {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, license_no, vehicle_name, vehicle_no } = req.body;
 
     // ── Validate required fields ──
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !license_no) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Name, email, and password are required.' },
+        error: { code: 'VALIDATION_ERROR', message: 'Name, email, password, and license number are required.' },
       });
     }
 
@@ -72,6 +72,24 @@ async function signup(req, res) {
       'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
       [name, email, passwordHash, assignedRole]
     );
+
+    // ── Insert driver ──
+    await db.query(
+      'INSERT INTO drivers (name, license_no, category, license_expiry, contact, safety_status, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, license_no, 'Light', '2030-01-01', email, 'Available', 'Available']
+    );
+
+    // ── Insert vehicle ──
+    if (vehicle_name && vehicle_no) {
+      try {
+        await db.query(
+          'INSERT INTO vehicles (reg_no, name_model, type, capacity, capacity_kg, odometer, acquisition_cost, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [vehicle_no, vehicle_name, 'Van', 'Small', 1500, 0, 500000.00, 'Available']
+        );
+      } catch (err) {
+        console.warn('[Auth] Error inserting vehicle during signup:', err.message);
+      }
+    }
 
     // authentication-signin.md §3: response 201, no password_hash
     return res.status(201).json({
