@@ -97,22 +97,22 @@ async function seedDatabase() {
 
       console.log('[Seed] Seeding trips...');
       await db.query(`
-        INSERT INTO trips (id, trip_code, source, destination, vehicle_id, driver_id, cargo_weight_kg, planned_distance_km, status) VALUES 
-        (1, 'TR001', 'Ahmedabad', 'Surat', 1, 1, 800, 250, 'Completed'),
-        (2, 'TR002', 'Vadodara', 'Mumbai', 2, 4, 2000, 400, 'Dispatched'),
-        (3, 'TR003', 'Surat', 'Pune', 5, 5, 4500, 350, 'Dispatched'),
-        (4, 'TR004', 'Ahmedabad', 'Jaipur', 4, 6, 3000, 650, 'Completed'),
-        (5, 'TR005', 'Rajkot', 'Ahmedabad', 6, 8, 1200, 215, 'Completed'),
-        (6, 'TR006', 'Mumbai', 'Goa', 8, 1, 11000, 580, 'Completed'),
-        (7, 'TR007', 'Pune', 'Bangalore', 2, 4, 2200, 840, 'Completed'),
-        (8, 'TR008', 'Jaipur', 'Delhi', 5, 5, 4000, 280, 'Completed'),
-        (9, 'TR009', 'Surat', 'Indore', 9, 8, 700, 420, 'Completed'),
-        (10, 'TR010', 'Delhi', 'Chandigarh', 4, 6, 3100, 250, 'Cancelled'),
-        (11, 'TR011', 'Bangalore', 'Chennai', 8, 1, 11500, 350, 'Completed'),
-        (12, 'TR012', 'Chennai', 'Hyderabad', 2, 4, 2300, 620, 'Draft'),
-        (13, 'TR013', 'Hyderabad', 'Nagpur', 6, 8, 1400, 500, 'Draft'),
-        (14, 'TR014', 'Nagpur', 'Bhopal', 1, 1, 900, 350, 'Draft'),
-        (15, 'TR015', 'Bhopal', 'Agra', 5, 5, 4800, 540, 'Draft')
+        INSERT INTO trips (id, trip_code, source, destination, vehicle_id, driver_id, cargo_weight_kg, planned_distance_km, status, created_at) VALUES 
+        (1, 'TR001', 'Ahmedabad', 'Surat', 1, 1, 800, 250, 'Completed', '2026-03-10 10:00:00'),
+        (2, 'TR002', 'Vadodara', 'Mumbai', 2, 4, 2000, 400, 'Dispatched', '2026-07-10 10:00:00'),
+        (3, 'TR003', 'Surat', 'Pune', 5, 5, 4500, 350, 'Dispatched', '2026-07-11 10:00:00'),
+        (4, 'TR004', 'Ahmedabad', 'Jaipur', 4, 6, 3000, 650, 'Completed', '2026-04-15 10:00:00'),
+        (5, 'TR005', 'Rajkot', 'Ahmedabad', 6, 8, 1200, 215, 'Completed', '2026-05-20 10:00:00'),
+        (6, 'TR006', 'Mumbai', 'Goa', 8, 1, 11000, 580, 'Completed', '2026-05-22 10:00:00'),
+        (7, 'TR007', 'Pune', 'Bangalore', 2, 4, 2200, 840, 'Completed', '2026-06-05 10:00:00'),
+        (8, 'TR008', 'Jaipur', 'Delhi', 5, 5, 4000, 280, 'Completed', '2026-06-18 10:00:00'),
+        (9, 'TR009', 'Surat', 'Indore', 9, 8, 700, 420, 'Completed', '2026-06-25 10:00:00'),
+        (10, 'TR010', 'Delhi', 'Chandigarh', 4, 6, 3100, 250, 'Cancelled', '2026-07-01 10:00:00'),
+        (11, 'TR011', 'Bangalore', 'Chennai', 8, 1, 11500, 350, 'Completed', '2026-07-05 10:00:00'),
+        (12, 'TR012', 'Chennai', 'Hyderabad', 2, 4, 2300, 620, 'Draft', '2026-07-08 10:00:00'),
+        (13, 'TR013', 'Hyderabad', 'Nagpur', 6, 8, 1400, 500, 'Draft', '2026-07-09 10:00:00'),
+        (14, 'TR014', 'Nagpur', 'Bhopal', 1, 1, 900, 350, 'Draft', '2026-07-10 10:00:00'),
+        (15, 'TR015', 'Bhopal', 'Agra', 5, 5, 4800, 540, 'Draft', '2026-07-11 10:00:00')
       `);
       
       console.log('[Seed] Seeding maintenance...');

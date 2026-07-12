@@ -245,14 +245,17 @@ async function loadTrips() {
     </div>
   `).join('');
 
-  // Populate Dropdowns for Create Form
-  const vehicles = await apiFetch('/dashboard/vehicles?status=Available');
-  const vSelect = document.getElementById('tripVehicle');
-  vSelect.innerHTML = '<option value="">Select vehicle...</option>' + vehicles.map(v => `<option value="${v.id}" data-cap="${v.capacity_kg}">${escapeHTML(v.name_model)} - ${escapeHTML(v.capacity)}</option>`).join('');
-  
-  const drivers = await apiFetch('/dashboard/drivers?status=Available');
-  const dSelect = document.getElementById('tripDriver');
-  dSelect.innerHTML = '<option value="">Select driver...</option>' + drivers.map(d => `<option value="${d.id}">${escapeHTML(d.name)}</option>`).join('');
+  // Populate Dropdowns for Create Form ONLY for Dispatcher
+  const user = getStoredUser();
+  if (user && user.role === 'dispatcher') {
+    const vehicles = await apiFetch('/dashboard/vehicles?status=Available');
+    const vSelect = document.getElementById('tripVehicle');
+    vSelect.innerHTML = '<option value="">Select vehicle...</option>' + vehicles.map(v => `<option value="${v.id}" data-cap="${v.capacity_kg}">${escapeHTML(v.name_model)} - ${escapeHTML(v.capacity)}</option>`).join('');
+    
+    const drivers = await apiFetch('/dashboard/drivers?status=Available');
+    const dSelect = document.getElementById('tripDriver');
+    dSelect.innerHTML = '<option value="">Select driver...</option>' + drivers.map(d => `<option value="${d.id}">${escapeHTML(d.name)}</option>`).join('');
+  }
 }
 
 document.getElementById('createTripForm')?.addEventListener('submit', async (e) => {
