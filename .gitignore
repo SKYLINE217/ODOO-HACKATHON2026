@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment (security.md §1: .env never committed)
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# AI tool configs
+.agent/
+.agents/
+.agentcortex/
+.agentcortex-manifest
+.antigravity/
+.claude/
+.codex/
+.gemini/
+.githooks/
