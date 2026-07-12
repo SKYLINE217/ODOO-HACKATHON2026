@@ -1128,3 +1128,5 @@ a:hover {
 .toggle-switch-input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
 .toggle-switch-input:checked { background: var(--status-blue); }
 .toggle-switch-input:checked::after { transform: translateX(20px); }
+
+#mapContainer { height: 600px; width: 100%; border-radius: var(--radius-sm); z-index: 1; margin-top: var(--spacing-sm); }

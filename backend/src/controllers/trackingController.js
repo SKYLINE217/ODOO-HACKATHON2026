@@ -25,7 +25,7 @@ exports.updateLocation = async (req, res) => {
 
 exports.getActiveLocations = async (req, res) => {
   try {
-    const [locations] = await db.query(`
+    const locations = await db.query(`
       SELECT 
         vl.vehicle_id, 
         vl.latitude, 
