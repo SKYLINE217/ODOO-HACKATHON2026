@@ -8,7 +8,16 @@
 
 const express = require('express');
 const { helmetMiddleware, corsMiddleware } = require('./middleware/security');
+const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth.routes');
+const vehicleRoutes = require('./routes/vehicles');
+const driverRoutes = require('./routes/drivers');
+const tripRoutes = require('./routes/trips');
+const maintenanceRoutes = require('./routes/maintenance');
+const fuelRoutes = require('./routes/fuelLogs');
+const expenseRoutes = require('./routes/expenses');
+const dashboardRoutes = require('./routes/dashboard');
+const reportRoutes = require('./routes/reports');
 
 const app = express();
 
@@ -28,25 +37,15 @@ app.get('/api/v1/health', (req, res) => {
 // ── Auth routes (Dev B — /api/v1/auth) ──
 app.use('/api/v1/auth', authRoutes);
 
-// ── Placeholder route mounts for Dev A ──
-// Uncomment and replace with real route files as endpoints are built:
-// const vehicleRoutes = require('./routes/vehicle.routes');
-// const driverRoutes = require('./routes/driver.routes');
-// const tripRoutes = require('./routes/trip.routes');
-// const maintenanceRoutes = require('./routes/maintenance.routes');
-// const fuelRoutes = require('./routes/fuel.routes');
-// const expenseRoutes = require('./routes/expense.routes');
-// const dashboardRoutes = require('./routes/dashboard.routes');
-// const reportRoutes = require('./routes/report.routes');
-//
-// app.use('/api/v1/vehicles', vehicleRoutes);
-// app.use('/api/v1/drivers', driverRoutes);
-// app.use('/api/v1/trips', tripRoutes);
-// app.use('/api/v1/maintenance', maintenanceRoutes);
-// app.use('/api/v1/fuel-logs', fuelRoutes);
-// app.use('/api/v1/expenses', expenseRoutes);
-// app.use('/api/v1/dashboard', dashboardRoutes);
-// app.use('/api/v1/reports', reportRoutes);
+// ── Dev A Routes ──
+app.use('/api/v1/vehicles', vehicleRoutes);
+app.use('/api/v1/drivers', driverRoutes);
+app.use('/api/v1/trips', tripRoutes);
+app.use('/api/v1/maintenance', maintenanceRoutes);
+app.use('/api/v1/fuel-logs', fuelRoutes);
+app.use('/api/v1/expenses', expenseRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/reports', reportRoutes);
 
 // ── 404 handler ──
 app.use((req, res) => {
@@ -57,12 +56,6 @@ app.use((req, res) => {
 });
 
 // ── Global error handler ──
-app.use((err, req, res, _next) => {
-  console.error('[Server] Unhandled error:', err);
-  res.status(500).json({
-    success: false,
-    error: { code: 'SERVER_ERROR', message: 'Internal server error.' },
-  });
-});
+app.use(errorHandler);
 
 module.exports = app;
