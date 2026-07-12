@@ -14,8 +14,13 @@ const app = express();
 
 // ── Global middleware ────────────────────────────────────────
 app.use(helmet());
+// ── CORS — require explicit origin when credentials: true ──
+const corsOrigin = process.env.CORS_ORIGIN;
+if (!corsOrigin || corsOrigin === '*') {
+  console.warn('[WARN] CORS_ORIGIN is not set or is wildcard. Defaulting to http://localhost:5500 for development.');
+}
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (corsOrigin && corsOrigin !== '*') ? corsOrigin : 'http://localhost:5500',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,

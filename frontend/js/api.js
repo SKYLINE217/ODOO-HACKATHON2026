@@ -4,7 +4,8 @@
  * On 401 from any endpoint → clear session → redirect to login.
  */
 
-const API_BASE = 'http://localhost:3005/api/v1';
+// Make sure this matches the PORT in backend/.env
+const API_BASE = 'http://localhost:3001/api/v1';
 
 async function apiFetch(path, options = {}) {
   const token = sessionStorage.getItem('token');
@@ -26,7 +27,7 @@ async function apiFetch(path, options = {}) {
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');
       window.location.href = 'login.html';
-      return;
+      throw new Error('Session expired. Redirecting to login.');
     }
     // Throw the server's error message so callers can display it
     throw new Error(json.error?.message || `Request failed (${res.status})`);

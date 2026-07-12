@@ -115,25 +115,10 @@ async function loadDashboardSummary() {
   document.getElementById('statDriversOnDuty').textContent = stats.drivers_on_duty;
   document.getElementById('statFleetUtilization').textContent = `${stats.fleet_utilization}%`;
   
-  // Auto-update Driver Location Feature (Indian Cities)
+  // Wire up real geolocation tracking for drivers with active trips
   const user = getStoredUser();
   if (user && user.role === 'driver') {
-    const indianCities = [
-      "Mumbai, MH", "Delhi, DL", "Bangalore, KA", "Hyderabad, TG", 
-      "Ahmedabad, GJ", "Chennai, TN", "Kolkata, WB", "Surat, GJ", 
-      "Pune, MH", "Jaipur, RJ", "Lucknow, UP", "Kanpur, UP"
-    ];
-    const updateLocation = () => {
-      const randomCity = indianCities[Math.floor(Math.random() * indianCities.length)];
-      const locElement = document.getElementById('statDriverLocation');
-      if (locElement) locElement.textContent = randomCity;
-    };
-    
-    updateLocation(); // initial
-    
-    if (!window.driverLocInterval) {
-      window.driverLocInterval = setInterval(updateLocation, 15000); // 15 seconds
-    }
+    startDriverGeoTracking();
   }
 
   const tbody = document.getElementById('recentTripsBody');
@@ -219,7 +204,7 @@ async function loadDrivers() {
       <td>${d.category}</td>
       <td>${new Date(d.license_expiry).toLocaleDateString()}</td>
       <td>${d.contact}</td>
-      <td>${d.trip_compliance}%</td>
+      <td>${d.trip_compliance != null ? d.trip_compliance + '%' : 'N/A'}</td>
       <td><span class="badge ${getVehicleBadgeClass(d.safety_status)}">${d.safety_status}</span></td>
       <td><span class="badge ${getVehicleBadgeClass(d.status)}">${d.status}</span></td>
     </tr>
@@ -380,20 +365,27 @@ async function loadAnalytics() {
     gradientStroke1.addColorStop(0.2, 'rgba(72,72,176,0.0)');
     gradientStroke1.addColorStop(0, 'rgba(203,12,159,0)');
     
+    // Use real data from backend API response
+    const revenueLabels = (data.monthly_revenue && data.monthly_revenue.length > 0)
+      ? data.monthly_revenue.map(m => m.month)
+      : ['No data'];
+    const revenueData = (data.monthly_revenue && data.monthly_revenue.length > 0)
+      ? data.monthly_revenue.map(m => parseFloat(m.km) || 0)
+      : [0];
+
     window.revenueChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        labels: revenueLabels,
         datasets: [{
-          label: "Revenue",
+          label: "Distance (km)",
           tension: 0.4,
           borderWidth: 3,
           pointRadius: 0,
           borderColor: "#cb0c9f",
-          borderWidth: 3,
           backgroundColor: gradientStroke1,
           fill: true,
-          data: [50000, 40000, 300000, 220000, 500000, 250000, 400000, 230000, 500000],
+          data: revenueData,
           maxBarThickness: 6
         }],
       },
@@ -461,12 +453,12 @@ document.getElementById('profileNewPassword')?.addEventListener('input', (e) => 
   
   if (val.length === 0) {
     meter.style.width = '0%';
-    txt.textContent = 'Enter at least 6 characters';
-  } else if (val.length < 6) {
+    txt.textContent = 'Enter at least 8 characters';
+  } else if (val.length < 8) {
     meter.style.width = '33%';
     meter.style.background = 'var(--status-red)';
-    txt.textContent = 'Weak';
-  } else if (val.length < 9) {
+    txt.textContent = 'Too short (min 8)';
+  } else if (val.length < 12) {
     meter.style.width = '66%';
     meter.style.background = 'var(--status-warning)';
     txt.textContent = 'Medium';
@@ -775,5 +767,85 @@ document.addEventListener('DOMContentLoaded', () => {
         // Option to refresh fleet data or maintenance list
       } catch(err) { showToast(err.message, 'error'); }
     });
+  }
+});
+
+// ── Driver Geolocation Tracking ──
+// Uses navigator.geolocation.watchPosition() to POST real coordinates
+// to the backend tracking endpoint when a driver has an active trip.
+let geoWatchId = null;
+let lastGeoSend = 0;
+
+async function startDriverGeoTracking() {
+  if (!navigator.geolocation) {
+    const locEl = document.getElementById('statDriverLocation');
+    if (locEl) locEl.textContent = 'Geolocation not supported';
+    return;
+  }
+
+  // First find the driver's dispatched trip to get vehicle_id
+  try {
+    const trips = await apiFetch('/dashboard/trips');
+    const user = getStoredUser();
+    const activeTrip = trips.find(t =>
+      t.status === 'Dispatched' && t.driver_name === user.name
+    );
+
+    if (!activeTrip || !activeTrip.vehicle_id) {
+      const locEl = document.getElementById('statDriverLocation');
+      if (locEl) locEl.textContent = 'No active trip';
+      return;
+    }
+
+    const vehicleId = activeTrip.vehicle_id;
+
+    geoWatchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const now = Date.now();
+        // Only send every 10 seconds
+        if (now - lastGeoSend < 10000) return;
+        lastGeoSend = now;
+
+        const { latitude, longitude } = position.coords;
+
+        try {
+          await apiFetch('/tracking', {
+            method: 'POST',
+            body: JSON.stringify({ vehicle_id: vehicleId, latitude, longitude })
+          });
+
+          const locEl = document.getElementById('statDriverLocation');
+          if (locEl) locEl.textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        } catch (err) {
+          console.error('Failed to send location:', err);
+        }
+      },
+      (err) => {
+        console.error('Geolocation error:', err);
+        const locEl = document.getElementById('statDriverLocation');
+        if (locEl) {
+          switch (err.code) {
+            case err.PERMISSION_DENIED:
+              locEl.textContent = 'Location permission denied';
+              break;
+            case err.POSITION_UNAVAILABLE:
+              locEl.textContent = 'Location unavailable';
+              break;
+            default:
+              locEl.textContent = 'Location error';
+          }
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+  } catch (err) {
+    console.error('Error setting up geo tracking:', err);
+  }
+}
+
+// Cleanup geo tracking when leaving the page
+window.addEventListener('beforeunload', () => {
+  if (geoWatchId !== null) {
+    navigator.geolocation.clearWatch(geoWatchId);
   }
 });

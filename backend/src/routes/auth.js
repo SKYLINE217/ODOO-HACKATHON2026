@@ -29,8 +29,23 @@ const loginRateLimiter = rateLimit({
   },
 });
 
-// POST /api/v1/auth/signup
-router.post('/signup', authController.signup);
+// ── Rate limiter for signup — 10 per hour per IP ──
+const signupRateLimiter = rateLimit({
+  windowMs: 3600000, // 1 hour
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many signup attempts. Please try again later.',
+    },
+  },
+});
+
+// POST /api/v1/auth/signup — rate limited
+router.post('/signup', signupRateLimiter, authController.signup);
 
 // POST /api/v1/auth/login — rate limited
 router.post('/login', loginRateLimiter, authController.login);

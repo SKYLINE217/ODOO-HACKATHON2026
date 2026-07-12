@@ -66,7 +66,7 @@ cd backend
 npm install
 npm run dev
 ```
-*The backend will run on `http://localhost:3005` and automatically seed demo accounts.*
+*The backend will run on `http://localhost:3001` and automatically seed demo accounts.*
 
 ### 3. Running the Frontend
 You can serve the `frontend` folder using any local web server. If you have `serve` installed globally or via npx:

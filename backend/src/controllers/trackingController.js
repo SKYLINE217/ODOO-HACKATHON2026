@@ -5,8 +5,26 @@ exports.updateLocation = async (req, res) => {
   try {
     const { vehicle_id, latitude, longitude } = req.body;
     
-    if (!vehicle_id || !latitude || !longitude) {
-      return res.status(400).json({ success: false, error: 'Missing location payload data' });
+    if (!vehicle_id || typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ success: false, error: 'Missing or invalid location payload data' });
+    }
+    
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ success: false, error: 'Coordinates out of bounds' });
+    }
+
+    if (req.user.role === 'driver') {
+      const driverTrips = await db.query(
+        `SELECT t.id FROM trips t 
+         JOIN drivers d ON t.driver_id = d.id 
+         WHERE d.name = (SELECT name FROM users WHERE id = ?) 
+           AND t.vehicle_id = ? 
+           AND t.status = 'Dispatched'`,
+        [req.user.id, vehicle_id]
+      );
+      if (driverTrips.length === 0) {
+        return res.status(403).json({ success: false, error: 'Forbidden: You are not dispatched to this vehicle.' });
+      }
     }
 
     await db.query(

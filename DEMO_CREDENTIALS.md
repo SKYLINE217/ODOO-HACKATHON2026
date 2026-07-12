@@ -4,10 +4,10 @@ Use these credentials to log in to the presentation demo. Each account demonstra
 
 | Role | Name | Email | Password | Access Level |
 | :--- | :--- | :--- | :--- | :--- |
-| **Fleet Manager** | Sarah Jenkins | `manager@transitops.demo` | `password123` | **Full Access**: Can add vehicles, view all drivers, schedule maintenance, update settings. |
-| **Driver** | Raj Patel (Senior Driver) | `driver@transitops.demo` | `password123` | **Restricted**: Can only view their assigned Trips and log Fuel. Linked to the "Raj Patel" driver profile. |
-| **Safety Officer** | Marcus Thorne | `safety@transitops.demo` | `password123` | **Restricted**: Can add/edit Drivers, view their trip compliance %, and manage suspended statuses. |
-| **Financial Analyst**| Elena Rostova | `finance@transitops.demo` | `password123` | **Restricted**: Can view Analytics, ROI formulas, Fuel Logs, and log Expenses. |
+| **Fleet Manager** | Fleet Manager Demo | `fleet@transitops.demo` | `password123` | **Full Access**: Can add vehicles, view all drivers, schedule maintenance, update settings. |
+| **Driver** | Driver Demo | `driver@transitops.demo` | `password123` | **Restricted**: Can only view their assigned Trips and log Fuel. Linked to the "Raj Patel" driver profile. |
+| **Safety Officer** | Safety Officer Demo | `safety@transitops.demo` | `password123` | **Restricted**: Can add/edit Drivers, view their trip compliance %, and manage suspended statuses. |
+| **Financial Analyst**| Finance Demo | `finance@transitops.demo` | `password123` | **Restricted**: Can view Analytics, ROI formulas, Fuel Logs, and log Expenses. |
 
 ### Note on Data
 The system is seeded with:

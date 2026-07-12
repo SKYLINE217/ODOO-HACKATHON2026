@@ -7,11 +7,16 @@
  *   { success: false, error: { code, message } }
  */
 function errorHandler(err, req, res, _next) {
+  // Only expose messages from errors explicitly created via createError()
+  // (those have a statusCode set by application code). Everything else
+  // is logged server-side and the client gets a generic message.
+  const isAppError = !!err.statusCode;
   const status  = err.statusCode || 500;
-  const code    = err.code       || 'INTERNAL_ERROR';
-  const message = err.message    || 'An unexpected error occurred.';
+  const code    = isAppError ? (err.code || 'BAD_REQUEST') : 'INTERNAL_ERROR';
+  const message = isAppError ? err.message : 'An unexpected error occurred.';
 
-  if (status === 500) {
+  // Always log 500s server-side with full details
+  if (status >= 500 || !isAppError) {
     console.error('[ERROR]', req.method, req.originalUrl, err);
   }
 

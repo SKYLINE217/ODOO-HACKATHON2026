@@ -148,16 +148,21 @@ exports.getTrips = async (req, res, next) => {
 };
 
 exports.createTrip = async (req, res, next) => {
+  const conn = await db.getConnection();
   try {
+    await conn.beginTransaction();
     const { source, destination, vehicle_id, driver_id, cargo_weight_kg, planned_distance_km } = req.body;
     if (!source || !destination) {
+      await conn.rollback(); conn.release();
       return res.status(400).json({ success: false, error: { message: 'Source and destination are required.' } });
     }
 
     // Capacity validation
     if (vehicle_id && cargo_weight_kg) {
-      const [vehicle] = await db.query('SELECT capacity_kg FROM vehicles WHERE id = ?', [vehicle_id]);
+      const [rows] = await conn.execute('SELECT capacity_kg FROM vehicles WHERE id = ?', [vehicle_id]);
+      const vehicle = rows[0];
       if (vehicle && cargo_weight_kg > vehicle.capacity_kg) {
+        await conn.rollback(); conn.release();
         return res.status(400).json({
           success: false,
           error: {
@@ -168,54 +173,67 @@ exports.createTrip = async (req, res, next) => {
       }
     }
 
-    // Auto-generate trip code
-    const [lastTrip] = await db.query('SELECT trip_code FROM trips ORDER BY id DESC LIMIT 1');
-    let nextCode = 'TR001';
-    if (lastTrip) {
-      const num = parseInt(lastTrip.trip_code.replace('TR', ''), 10) + 1;
-      nextCode = 'TR' + String(num).padStart(3, '0');
-    }
-
     const status = vehicle_id && driver_id ? 'Dispatched' : 'Draft';
 
-    await db.query(
+    // Insert with a placeholder trip_code, then derive from AUTO_INCREMENT id (race-free)
+    const [insertResult] = await conn.execute(
       'INSERT INTO trips (trip_code, source, destination, vehicle_id, driver_id, cargo_weight_kg, planned_distance_km, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [nextCode, source, destination, vehicle_id || null, driver_id || null, cargo_weight_kg || 0, planned_distance_km || 0, status]
+      ['TEMP', source, destination, vehicle_id || null, driver_id || null, cargo_weight_kg || 0, planned_distance_km || 0, status]
     );
+    const tripId = insertResult.insertId;
+    const tripCode = 'TR' + String(tripId).padStart(3, '0');
+    await conn.execute('UPDATE trips SET trip_code = ? WHERE id = ?', [tripCode, tripId]);
 
     // Update vehicle and driver status if dispatched
     if (status === 'Dispatched') {
-      if (vehicle_id) await db.query("UPDATE vehicles SET status = 'On Trip' WHERE id = ?", [vehicle_id]);
-      if (driver_id) await db.query("UPDATE drivers SET status = 'On Trip', safety_status = 'On Trip' WHERE id = ?", [driver_id]);
+      if (vehicle_id) await conn.execute("UPDATE vehicles SET status = 'On Trip' WHERE id = ?", [vehicle_id]);
+      if (driver_id) await conn.execute("UPDATE drivers SET status = 'On Trip', safety_status = 'On Trip' WHERE id = ?", [driver_id]);
     }
 
-    res.status(201).json({ success: true, data: { message: 'Trip created.', trip_code: nextCode, status } });
-  } catch (err) { next(err); }
+    await conn.commit();
+    conn.release();
+    res.status(201).json({ success: true, data: { message: 'Trip created.', trip_code: tripCode, status } });
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    next(err);
+  }
 };
 
 exports.updateTripStatus = async (req, res, next) => {
+  const conn = await db.getConnection();
   try {
+    await conn.beginTransaction();
     const { id } = req.params;
     const { status } = req.body;
     if (!status) {
+      await conn.rollback(); conn.release();
       return res.status(400).json({ success: false, error: { message: 'Status is required.' } });
     }
 
-    const [trip] = await db.query('SELECT * FROM trips WHERE id = ?', [id]);
+    const [rows] = await conn.execute('SELECT * FROM trips WHERE id = ?', [id]);
+    const trip = rows[0];
     if (!trip) {
+      await conn.rollback(); conn.release();
       return res.status(404).json({ success: false, error: { message: 'Trip not found.' } });
     }
 
-    await db.query('UPDATE trips SET status = ? WHERE id = ?', [status, id]);
+    await conn.execute('UPDATE trips SET status = ? WHERE id = ?', [status, id]);
 
     // On Complete/Cancel: free up vehicle and driver
     if (status === 'Completed' || status === 'Cancelled') {
-      if (trip.vehicle_id) await db.query("UPDATE vehicles SET status = 'Available' WHERE id = ?", [trip.vehicle_id]);
-      if (trip.driver_id) await db.query("UPDATE drivers SET status = 'Available', safety_status = 'Available' WHERE id = ?", [trip.driver_id]);
+      if (trip.vehicle_id) await conn.execute("UPDATE vehicles SET status = 'Available' WHERE id = ?", [trip.vehicle_id]);
+      if (trip.driver_id) await conn.execute("UPDATE drivers SET status = 'Available', safety_status = 'Available' WHERE id = ?", [trip.driver_id]);
     }
 
+    await conn.commit();
+    conn.release();
     res.json({ success: true, data: { message: `Trip status updated to ${status}.` } });
-  } catch (err) { next(err); }
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    next(err);
+  }
 };
 
 // ── Maintenance ───────────────────────────────────────────────
@@ -234,45 +252,64 @@ exports.getMaintenance = async (req, res, next) => {
 };
 
 exports.createMaintenance = async (req, res, next) => {
+  const conn = await db.getConnection();
   try {
+    await conn.beginTransaction();
     const { vehicle_id, service_type, cost, service_date, status } = req.body;
     if (!vehicle_id || !service_type || !cost || !service_date) {
+      await conn.rollback(); conn.release();
       return res.status(400).json({ success: false, error: { message: 'Missing required fields.' } });
     }
 
-    await db.query(
+    await conn.execute(
       'INSERT INTO maintenance_records (vehicle_id, service_type, cost, service_date, status) VALUES (?, ?, ?, ?, ?)',
       [vehicle_id, service_type, cost, service_date, status || 'Active']
     );
 
     // Set vehicle to "In Shop" when maintenance is active
     if (!status || status === 'Active') {
-      await db.query("UPDATE vehicles SET status = 'In Shop' WHERE id = ?", [vehicle_id]);
+      await conn.execute("UPDATE vehicles SET status = 'In Shop' WHERE id = ?", [vehicle_id]);
     }
 
+    await conn.commit();
+    conn.release();
     res.status(201).json({ success: true, data: { message: 'Maintenance record created.' } });
-  } catch (err) { next(err); }
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    next(err);
+  }
 };
 
 exports.updateMaintenance = async (req, res, next) => {
+  const conn = await db.getConnection();
   try {
+    await conn.beginTransaction();
     const { id } = req.params;
     const { status } = req.body;
 
-    const [record] = await db.query('SELECT * FROM maintenance_records WHERE id = ?', [id]);
+    const [rows] = await conn.execute('SELECT * FROM maintenance_records WHERE id = ?', [id]);
+    const record = rows[0];
     if (!record) {
+      await conn.rollback(); conn.release();
       return res.status(404).json({ success: false, error: { message: 'Record not found.' } });
     }
 
-    await db.query('UPDATE maintenance_records SET status = ? WHERE id = ?', [status, id]);
+    await conn.execute('UPDATE maintenance_records SET status = ? WHERE id = ?', [status, id]);
 
     // When completed, set vehicle back to Available
     if (status === 'Completed' && record.vehicle_id) {
-      await db.query("UPDATE vehicles SET status = 'Available' WHERE id = ?", [record.vehicle_id]);
+      await conn.execute("UPDATE vehicles SET status = 'Available' WHERE id = ?", [record.vehicle_id]);
     }
 
+    await conn.commit();
+    conn.release();
     res.json({ success: true, data: { message: 'Maintenance record updated.' } });
-  } catch (err) { next(err); }
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    next(err);
+  }
 };
 
 // ── Fuel Logs ─────────────────────────────────────────────────
@@ -336,30 +373,36 @@ exports.createExpense = async (req, res, next) => {
 
 exports.getDashboardSummary = async (req, res, next) => {
   try {
-    const [vehicles] = await db.query('SELECT COUNT(*) as total FROM vehicles');
-    const [available] = await db.query("SELECT COUNT(*) as total FROM vehicles WHERE status = 'Available'");
-    const [inMaint] = await db.query("SELECT COUNT(*) as total FROM vehicles WHERE status = 'In Shop'");
-    const [activeTrips] = await db.query("SELECT COUNT(*) as total FROM trips WHERE status IN ('Dispatched')");
-    const [pendingTrips] = await db.query("SELECT COUNT(*) as total FROM trips WHERE status = 'Draft'");
-    const [driversOnDuty] = await db.query("SELECT COUNT(*) as total FROM drivers WHERE status IN ('Available', 'On Trip')");
+    // Run all independent queries in parallel
+    const [
+      [vehicles],
+      [available],
+      [inMaint],
+      [activeTrips],
+      [pendingTrips],
+      [driversOnDuty],
+      statusBreakdown,
+      recentTrips
+    ] = await Promise.all([
+      db.query('SELECT COUNT(*) as total FROM vehicles'),
+      db.query("SELECT COUNT(*) as total FROM vehicles WHERE status = 'Available'"),
+      db.query("SELECT COUNT(*) as total FROM vehicles WHERE status = 'In Shop'"),
+      db.query("SELECT COUNT(*) as total FROM trips WHERE status IN ('Dispatched')"),
+      db.query("SELECT COUNT(*) as total FROM trips WHERE status = 'Draft'"),
+      db.query("SELECT COUNT(*) as total FROM drivers WHERE status IN ('Available', 'On Trip')"),
+      db.query("SELECT status, COUNT(*) as count FROM vehicles GROUP BY status ORDER BY FIELD(status, 'Available','On Trip','In Shop','Retired')"),
+      db.query(`
+        SELECT t.trip_code, v.name_model AS vehicle, d.name AS driver, t.status, t.eta
+        FROM trips t
+        LEFT JOIN vehicles v ON t.vehicle_id = v.id
+        LEFT JOIN drivers d ON t.driver_id = d.id
+        ORDER BY t.id DESC LIMIT 6
+      `)
+    ]);
 
     const totalVehicles = vehicles.total || 0;
     const availableVehicles = available.total || 0;
     const utilization = totalVehicles > 0 ? Math.round(((totalVehicles - availableVehicles) / totalVehicles) * 100) : 0;
-
-    // Vehicle status breakdown for bar chart
-    const statusBreakdown = await db.query(
-      "SELECT status, COUNT(*) as count FROM vehicles GROUP BY status ORDER BY FIELD(status, 'Available','On Trip','In Shop','Retired')"
-    );
-
-    // Recent trips with joins
-    const recentTrips = await db.query(`
-      SELECT t.trip_code, v.name_model AS vehicle, d.name AS driver, t.status, t.eta
-      FROM trips t
-      LEFT JOIN vehicles v ON t.vehicle_id = v.id
-      LEFT JOIN drivers d ON t.driver_id = d.id
-      ORDER BY t.id DESC LIMIT 6
-    `);
 
     res.json({
       success: true,
@@ -382,47 +425,51 @@ exports.getDashboardSummary = async (req, res, next) => {
 
 exports.getAnalytics = async (req, res, next) => {
   try {
-    // Fuel efficiency: total distance / total liters
-    const [totalFuel] = await db.query('SELECT SUM(liters) as total_liters, SUM(fuel_cost) as total_fuel_cost FROM fuel_logs');
-    const [totalDist] = await db.query("SELECT SUM(planned_distance_km) as total_km FROM trips WHERE status = 'Completed'");
+    // Run all independent queries in parallel
+    const [
+      [totalFuel],
+      [totalDist],
+      [vehicles],
+      [available],
+      [totalMaint],
+      [totalAcq],
+      costliestVehicles,
+      monthlyData
+    ] = await Promise.all([
+      db.query('SELECT SUM(liters) as total_liters, SUM(fuel_cost) as total_fuel_cost FROM fuel_logs'),
+      db.query("SELECT SUM(planned_distance_km) as total_km FROM trips WHERE status = 'Completed'"),
+      db.query('SELECT COUNT(*) as total FROM vehicles'),
+      db.query("SELECT COUNT(*) as total FROM vehicles WHERE status = 'Available'"),
+      db.query('SELECT SUM(cost) as total FROM maintenance_records'),
+      db.query('SELECT SUM(acquisition_cost) as total FROM vehicles'),
+      db.query(`
+        SELECT v.name_model,
+          COALESCE((SELECT SUM(cost) FROM maintenance_records WHERE vehicle_id = v.id), 0) +
+          COALESCE((SELECT SUM(fuel_cost) FROM fuel_logs WHERE vehicle_id = v.id), 0) as total_cost
+        FROM vehicles v
+        ORDER BY total_cost DESC
+        LIMIT 5
+      `),
+      db.query(`
+        SELECT DATE_FORMAT(created_at, '%Y-%m') as month,
+               COUNT(*) as trips,
+               SUM(planned_distance_km) as km
+        FROM trips
+        WHERE status = 'Completed'
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+        ORDER BY month ASC
+        LIMIT 12
+      `)
+    ]);
+
     const fuelEfficiency = (totalFuel.total_liters && totalDist.total_km)
       ? (parseFloat(totalDist.total_km) / parseFloat(totalFuel.total_liters)).toFixed(1) : '0.0';
 
-    // Fleet utilization
-    const [vehicles] = await db.query('SELECT COUNT(*) as total FROM vehicles');
-    const [available] = await db.query("SELECT COUNT(*) as total FROM vehicles WHERE status = 'Available'");
     const totalVehicles = vehicles.total || 1;
     const utilization = Math.round(((totalVehicles - (available.total || 0)) / totalVehicles) * 100);
 
-    // Operational cost
-    const [totalMaint] = await db.query('SELECT SUM(cost) as total FROM maintenance_records');
     const operationalCost = (parseFloat(totalFuel.total_fuel_cost) || 0) + (parseFloat(totalMaint.total) || 0);
-
-    // Total acquisition cost
-    const [totalAcq] = await db.query('SELECT SUM(acquisition_cost) as total FROM vehicles');
     const roi = totalAcq.total ? ((operationalCost / parseFloat(totalAcq.total)) * 100).toFixed(1) : '0.0';
-
-    // Costliest vehicles
-    const costliestVehicles = await db.query(`
-      SELECT v.name_model,
-        COALESCE((SELECT SUM(cost) FROM maintenance_records WHERE vehicle_id = v.id), 0) +
-        COALESCE((SELECT SUM(fuel_cost) FROM fuel_logs WHERE vehicle_id = v.id), 0) as total_cost
-      FROM vehicles v
-      ORDER BY total_cost DESC
-      LIMIT 5
-    `);
-
-    // Monthly revenue (simulated with trip completion data)
-    const monthlyData = await db.query(`
-      SELECT DATE_FORMAT(created_at, '%Y-%m') as month,
-             COUNT(*) as trips,
-             SUM(planned_distance_km) as km
-      FROM trips
-      WHERE status = 'Completed'
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-      ORDER BY month ASC
-      LIMIT 12
-    `);
 
     res.json({
       success: true,
@@ -521,8 +568,8 @@ exports.changePassword = async (req, res, next) => {
     if (!current_password || !new_password) {
       return res.status(400).json({ success: false, error: { message: 'Both current and new passwords are required.' } });
     }
-    if (new_password.length < 6) {
-      return res.status(400).json({ success: false, error: { message: 'New password must be at least 6 characters.' } });
+    if (new_password.length < 8) {
+      return res.status(400).json({ success: false, error: { message: 'New password must be at least 8 characters.' } });
     }
 
     const [user] = await db.query('SELECT password_hash FROM users WHERE id = ?', [req.user.id]);

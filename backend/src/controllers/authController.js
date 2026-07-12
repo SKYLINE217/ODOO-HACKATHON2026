@@ -26,10 +26,10 @@ async function signup(req, res) {
     const { name, email, password, role } = req.body;
 
     // ── Validate required fields ──
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: 'Name, email, password, and role are required.' },
+        error: { code: 'VALIDATION_ERROR', message: 'Name, email, and password are required.' },
       });
     }
 
@@ -50,13 +50,10 @@ async function signup(req, res) {
       });
     }
 
-    // ── Role must be one of the canonical enum values ──
-    if (!VALID_ROLES.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'VALIDATION_ERROR', message: `Role must be one of: ${VALID_ROLES.join(', ')}` },
-      });
-    }
+    // ── Public signup is always assigned the lowest-privilege role ──
+    // Elevated roles (fleet_manager, safety_officer, financial_analyst)
+    // must be provisioned by an administrator directly in the database.
+    const assignedRole = 'driver';
 
     // ── Check for duplicate email — 409 conflict ──
     const existing = await db.query('SELECT id FROM users WHERE email = ?', [email]);
@@ -73,7 +70,7 @@ async function signup(req, res) {
     // ── Insert user ──
     const result = await db.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [name, email, passwordHash, role]
+      [name, email, passwordHash, assignedRole]
     );
 
     // authentication-signin.md §3: response 201, no password_hash
@@ -83,7 +80,7 @@ async function signup(req, res) {
         id: result.insertId,
         name,
         email,
-        role,
+        role: assignedRole,
       },
     });
   } catch (err) {

@@ -6,12 +6,15 @@ const path = require('path');
 
 async function initDb() {
   try {
+    if (!process.env.DB_PASS) {
+      throw new Error('DB_PASS environment variable must be set. Never use hardcoded passwords.');
+    }
     console.log('Connecting to MySQL to initialize DB...');
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 3306,
       user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASS || 'Sumit123'
+      password: process.env.DB_PASS
     });
     
     console.log('Creating database if not exists...');
@@ -20,15 +23,15 @@ async function initDb() {
     console.log('Using database transitops...');
     await connection.query('USE transitops');
     
-    console.log('Creating users table...');
+    console.log('Creating tables...');
     const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
     
-    // Quick parse to run statements (super simple split by ;)
-    const statements = schemaSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+    // Strip all lines starting with --
+    const cleanSql = schemaSql.replace(/^--.*$/gm, '');
+    
+    const statements = cleanSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
     for (const stmt of statements) {
-      if (!stmt.toLowerCase().startsWith('--')) {
-        await connection.query(stmt);
-      }
+      await connection.query(stmt);
     }
     
     console.log('Database initialized successfully.');
