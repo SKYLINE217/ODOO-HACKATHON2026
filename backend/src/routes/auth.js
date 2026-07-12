@@ -14,10 +14,10 @@ const authController   = require('../controllers/authController');
 
 const router = Router();
 
-// ── Rate limiter for login — security.md §6: 5 attempts / 15 min ──
+// ── Rate limiter for login — security.md §6: 50 attempts / 4 seconds ──
 const loginRateLimiter = rateLimit({
-  windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS, 10) || 900000,
-  max:      parseInt(process.env.LOGIN_RATE_LIMIT_MAX, 10)       || 5,
+  windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS, 10) || 4000,
+  max:      parseInt(process.env.LOGIN_RATE_LIMIT_MAX, 10)       || 50,
   standardHeaders: true,
   legacyHeaders:   false,
   message: {
