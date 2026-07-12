@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up — TransitOps</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <!-- Left Branding Panel -->
+    <div class="auth-branding">
+      <div class="brand-logo">
+        <div class="brand-icon">TO</div>
+      </div>
+      <h1 class="brand-title">Transit<span>Ops</span></h1>
+      <p class="brand-tagline">Smart Transport Operations Platform</p>
+      
+      <ul class="brand-features">
+        <li>
+          <div class="feature-icon">🛡️</div>
+          <span>Role-Based Access Control</span>
+        </li>
+        <li>
+          <div class="feature-icon">🚚</div>
+          <span>Real-time Fleet Dispatch</span>
+        </li>
+        <li>
+          <div class="feature-icon">📊</div>
+          <span>Financial & ROI Analytics</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Right Form Panel -->
+    <div class="auth-form-panel">
+      <div class="auth-form-wrapper">
+        <div class="auth-form-header">
+          <h1>Create Account</h1>
+          <p>Join TransitOps to manage your fleet operations.</p>
+        </div>
+
+        <form id="signupForm" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="name">Full Name</label>
+              <input type="text" id="name" class="form-input" placeholder="Alex Doe" autocomplete="name">
+              <div id="nameError" class="form-error"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Work Email</label>
+            <input type="email" id="email" class="form-input" placeholder="alex@transitops.com" autocomplete="email">
+            <div id="emailError" class="form-error"></div>
+          </div>
+
+          <div class="form-group" style="display:none;">
+            <label class="form-label" for="role">Role</label>
+            <select id="role" class="form-select">
+              <option value="driver">Driver</option>
+            </select>
+            <div id="roleError" class="form-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="password" class="form-input" placeholder="8+ characters" autocomplete="new-password">
+              <button type="button" class="password-toggle" id="togglePassword">👁</button>
+            </div>
+            <div class="password-strength">
+              <div class="strength-bar"></div>
+              <div class="strength-bar"></div>
+              <div class="strength-bar"></div>
+              <div class="strength-bar"></div>
+            </div>
+            <div class="strength-label"></div>
+            <div id="passwordError" class="form-error"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" class="form-input" placeholder="Repeat password" autocomplete="new-password">
+            <div id="confirmPasswordError" class="form-error"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary mt-2">
+            <span class="spinner"></span>
+            <span class="btn-text">Create Account</span>
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Already have an account? <a href="login.html">Sign In</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/signup.js"></script>
+</body>
+</html>
