@@ -225,7 +225,10 @@
               </select>
               <input type="text" class="form-input search-input" placeholder="Search reg. no..." id="fleetSearch">
             </div>
-            <button class="btn btn-accent btn-md" id="addVehicleBtn">+ Add Vehicle</button>
+            <div class="btn-group">
+              <button class="btn btn-ghost btn-md" id="exportFleetCsvBtn" data-roles="fleet_manager,financial_analyst">⬇ Export CSV</button>
+              <button class="btn btn-accent btn-md" id="addVehicleBtn" data-roles="fleet_manager">+ Add Vehicle</button>
+            </div>
           </div>
 
           <div class="data-table-container">

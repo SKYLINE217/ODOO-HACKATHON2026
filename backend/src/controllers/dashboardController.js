@@ -587,3 +587,52 @@ exports.changePassword = async (req, res, next) => {
     res.json({ success: true, data: { message: 'Password changed successfully.' } });
   } catch (err) { next(err); }
 };
+
+exports.deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    // Ensure the user exists
+    const [user] = await db.query('SELECT id FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: { message: 'User not found.' } });
+    }
+
+    // Delete user from db
+    await db.query('DELETE FROM users WHERE id = ?', [userId]);
+    
+    // We could also delete related records in drivers/trips/etc. but for this prototype just deleting the user is fine, or set their role to disabled.
+    res.json({ success: true, data: { message: 'Account deleted successfully.' } });
+  } catch (err) { next(err); }
+};
+
+exports.exportCsv = async (req, res, next) => {
+  try {
+    const table = req.params.table;
+    const allowedTables = ['trips', 'expenses', 'fuel_logs', 'vehicles', 'drivers'];
+    if (!allowedTables.includes(table)) {
+      return res.status(400).json({ success: false, error: { message: 'Invalid table for export.' } });
+    }
+
+    const [rows] = await db.query(`SELECT * FROM ${table} ORDER BY id DESC`);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, error: { message: 'No data to export.' } });
+    }
+
+    // Convert JSON to CSV
+    const header = Object.keys(rows[0]).join(',');
+    const csvRows = rows.map(row => {
+      return Object.values(row).map(val => {
+        // Simple escaping for CSV: replace null with empty, wrap in quotes if contains comma
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        return str.includes(',') ? `"${str.replace(/"/g, '""')}"` : str;
+      }).join(',');
+    });
+
+    const csvData = [header, ...csvRows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${table}_export_${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csvData);
+  } catch (err) { next(err); }
+};

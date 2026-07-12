@@ -212,6 +212,12 @@ async function loadDrivers() {
 }
 
 // ── 4. Trips ──
+// CSV Export
+document.getElementById('exportFleetCsvBtn')?.addEventListener('click', () => {
+  const token = sessionStorage.getItem('token');
+  window.open(`${API_BASE}/dashboard/export/vehicles?token=${token}`, '_blank');
+});
+
 async function loadTrips() {
   const data = await apiFetch('/dashboard/trips');
   const liveBoard = document.getElementById('liveBoard');
@@ -470,9 +476,15 @@ document.getElementById('profileNewPassword')?.addEventListener('input', (e) => 
 });
 
 // Delete Account button
-document.getElementById('btnDeleteAccount')?.addEventListener('click', () => {
+document.getElementById('btnDeleteAccount')?.addEventListener('click', async () => {
   if (confirm("Are you absolutely sure you want to delete your account? This action cannot be undone.")) {
-    showToast('Account deletion requested. Support will contact you shortly.', 'info');
+    try {
+      await apiFetch('/dashboard/profile', { method: 'DELETE' });
+      showToast('Account deleted successfully.', 'success');
+      setTimeout(logout, 1500);
+    } catch (err) {
+      showToast(err.message || 'Failed to delete account', 'error');
+    }
   }
 });
 
@@ -553,43 +565,66 @@ async function loadTracking() {
   // Initial fetch
   await fetchAndRenderLocations();
 
-  // Setup polling
+  // Setup SSE for push updates
+  if (!window.trackingSSE) {
+    const token = sessionStorage.getItem('token');
+    const sseUrl = `${API_BASE}/tracking/stream?token=${token}`;
+    window.trackingSSE = new EventSource(sseUrl);
+    
+    window.trackingSSE.onmessage = (event) => {
+      try {
+        const loc = JSON.parse(event.data);
+        renderLocationMarker(loc);
+      } catch (err) {
+        console.error('SSE parsing error', err);
+      }
+    };
+    
+    window.trackingSSE.onerror = (err) => {
+      console.error('SSE connection error, closing', err);
+      window.trackingSSE.close();
+      window.trackingSSE = null;
+    };
+  }
+
+  // Fallback poll just for reconciliation
   if (trackingInterval) clearInterval(trackingInterval);
-  trackingInterval = setInterval(fetchAndRenderLocations, 15000);
+  trackingInterval = setInterval(fetchAndRenderLocations, 60000);
+}
+
+function renderLocationMarker(loc) {
+  const latLng = [loc.latitude, loc.longitude];
+  const popupHTML = `
+    <div style="font-family: var(--font-primary); font-size: 0.9rem;">
+      <strong style="color: var(--status-blue);">${loc.reg_no}</strong><br>
+      <span style="color: var(--text-muted); font-size: 0.8rem;">Driver:</span> ${loc.driver_name || 'N/A'}<br>
+      <span style="color: var(--text-muted); font-size: 0.8rem;">Route:</span> ${loc.source || '?'} &rarr; ${loc.destination || '?'}<br>
+      <span style="color: var(--text-muted); font-size: 0.75rem; margin-top: 5px; display: block;">
+        Updated: ${new Date(loc.recorded_at).toLocaleTimeString()}
+      </span>
+    </div>
+  `;
+
+  if (trackingMarkers[loc.vehicle_id]) {
+    trackingMarkers[loc.vehicle_id].setLatLng(latLng);
+    trackingMarkers[loc.vehicle_id].setPopupContent(popupHTML);
+  } else {
+    const marker = L.marker(latLng).addTo(trackingMap);
+    marker.bindPopup(popupHTML);
+    trackingMarkers[loc.vehicle_id] = marker;
+  }
 }
 
 async function fetchAndRenderLocations() {
   try {
     const locations = await apiFetch('/tracking/active');
-    
-    locations.forEach(loc => {
-      const latLng = [loc.latitude, loc.longitude];
-      const popupHTML = `
-        <div style="font-family: var(--font-primary); font-size: 0.9rem;">
-          <strong style="color: var(--status-blue);">${loc.reg_no}</strong><br>
-          <span style="color: var(--text-muted); font-size: 0.8rem;">Driver:</span> ${loc.driver_name || 'N/A'}<br>
-          <span style="color: var(--text-muted); font-size: 0.8rem;">Route:</span> ${loc.source || '?'} &rarr; ${loc.destination || '?'}<br>
-          <span style="color: var(--text-muted); font-size: 0.75rem; margin-top: 5px; display: block;">
-            Updated: ${new Date(loc.recorded_at).toLocaleTimeString()}
-          </span>
-        </div>
-      `;
-
-      if (trackingMarkers[loc.vehicle_id]) {
-        trackingMarkers[loc.vehicle_id].setLatLng(latLng);
-        trackingMarkers[loc.vehicle_id].setPopupContent(popupHTML);
-      } else {
-        const marker = L.marker(latLng).addTo(trackingMap);
-        marker.bindPopup(popupHTML);
-        trackingMarkers[loc.vehicle_id] = marker;
-      }
-    });
+    locations.forEach(loc => renderLocationMarker(loc));
   } catch (err) {
     console.error('Error fetching live tracking data:', err);
   }
 }
 
-// Ensure polling stops if user navigates to another tab
+// Ensure polling and SSE stops if user navigates to another tab
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', (e) => {
     const tabName = item.getAttribute('data-tab');
@@ -597,6 +632,10 @@ document.querySelectorAll('.nav-item').forEach(item => {
       if (trackingInterval) {
         clearInterval(trackingInterval);
         trackingInterval = null;
+      }
+      if (window.trackingSSE) {
+        window.trackingSSE.close();
+        window.trackingSSE = null;
       }
     }
   });

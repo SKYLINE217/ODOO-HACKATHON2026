@@ -57,5 +57,9 @@ router.put('/settings', requireRole(['fleet_manager']), ctrl.updateSettings);
 router.get('/profile', ctrl.getUserProfile);
 router.put('/profile', ctrl.updateUserProfile);
 router.put('/profile/password', ctrl.changePassword);
+router.delete('/profile', ctrl.deleteAccount);
+
+// ── Export (Fleet Manager + Financial Analyst) ────────────────────
+router.get('/export/:table', requireRole(['fleet_manager', 'financial_analyst']), ctrl.exportCsv);
 
 module.exports = router;

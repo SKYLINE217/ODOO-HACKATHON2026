@@ -1,6 +1,21 @@
 'use strict';
 const db = require('../config/db');
 
+let sseClients = [];
+
+exports.streamLocations = (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  sseClients.push(res);
+
+  req.on('close', () => {
+    sseClients = sseClients.filter(client => client !== res);
+  });
+};
+
 exports.updateLocation = async (req, res) => {
   try {
     const { vehicle_id, latitude, longitude } = req.body;
@@ -33,6 +48,29 @@ exports.updateLocation = async (req, res) => {
        ON DUPLICATE KEY UPDATE latitude = VALUES(latitude), longitude = VALUES(longitude), recorded_at = CURRENT_TIMESTAMP`,
       [vehicle_id, latitude, longitude]
     );
+
+    // Fetch full details to broadcast
+    const [updatedLoc] = await db.query(`
+      SELECT 
+        vl.vehicle_id, 
+        vl.latitude, 
+        vl.longitude, 
+        vl.recorded_at,
+        v.reg_no,
+        t.source,
+        t.destination,
+        d.name AS driver_name
+      FROM vehicle_locations vl
+      JOIN vehicles v ON vl.vehicle_id = v.id
+      LEFT JOIN trips t ON t.vehicle_id = v.id AND t.status = 'Dispatched'
+      LEFT JOIN drivers d ON t.driver_id = d.id
+      WHERE vl.vehicle_id = ?
+    `, [vehicle_id]);
+
+    if (updatedLoc && sseClients.length > 0) {
+      const data = JSON.stringify(updatedLoc);
+      sseClients.forEach(client => client.write(`data: ${data}\n\n`));
+    }
 
     res.json({ success: true, data: { message: 'Location updated' } });
   } catch (error) {

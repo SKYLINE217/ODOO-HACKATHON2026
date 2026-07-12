@@ -15,16 +15,21 @@ const jwt = require('jsonwebtoken');
  * Returns 401 on missing/invalid/expired token.
  */
 function requireAuth(req, res, next) {
+  let token;
   const authHeader = req.headers.authorization;
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token; // Fallback for EventSource (SSE)
+  }
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!token) {
     return res.status(401).json({
       success: false,
       error: { code: 'AUTH_REQUIRED', message: 'Authentication required.' },
     });
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
