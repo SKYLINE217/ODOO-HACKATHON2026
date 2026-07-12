@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TransitOps Dashboard — Smart Transport Operations Platform for fleet management, trip dispatch, driver safety, maintenance tracking, and financial analytics.">
+  <title>Dashboard — TransitOps</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+</head>
+<body>
+  
+  <!-- Loading State -->
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading profile data...</div>
+  </div>
+
+  <div class="app-layout" id="appLayout" style="display: none;">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="topbar-logo">TO</div>
+        <div class="topbar-title">Transit<span>Ops</span></div>
+      </div>
+      
+      <nav class="sidebar-nav" id="sidebarNav">
+        <a href="#" class="nav-item active" data-tab="dashboard" id="nav-dashboard">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="#" class="nav-item" data-tab="fleet" data-roles="fleet_manager" id="nav-fleet">
+          <span class="nav-icon">🚛</span> Fleet
+        </a>
+        <a href="#" class="nav-item" data-tab="drivers" data-roles="safety_officer,fleet_manager" id="nav-drivers">
+          <span class="nav-icon">👤</span> Drivers
+        </a>
+        <a href="#" class="nav-item" data-tab="trips" data-roles="driver,fleet_manager" id="nav-trips">
+          <span class="nav-icon">🗺️</span> Trips
+        </a>
+        <a href="#" class="nav-item" data-tab="maintenance" data-roles="fleet_manager" id="nav-maintenance">
+          <span class="nav-icon">🔧</span> Maintenance
+        </a>
+        <a href="#" class="nav-item" data-tab="fuel" data-roles="financial_analyst,fleet_manager,driver" id="nav-fuel">
+          <span class="nav-icon">⛽</span> Fuel & Expenses
+        </a>
+        <a href="#" class="nav-item" data-tab="analytics" data-roles="financial_analyst,fleet_manager" id="nav-analytics">
+          <span class="nav-icon">📈</span> Analytics
+        </a>
+        <a href="#" class="nav-item" data-tab="settings" data-roles="fleet_manager" id="nav-settings">
+          <span class="nav-icon">⚙️</span> Settings
+        </a>
+        <a href="#" class="nav-item" data-tab="profile" id="nav-profile">
+          <span class="nav-icon">👤</span> My Profile
+        </a>
+        <a href="#" class="nav-item" data-tab="tracking" data-roles="fleet_manager" id="nav-tracking">
+          <span class="nav-icon">📍</span> Live Map
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <header class="dashboard-topbar">
+        <div class="topbar-search">
+           <input type="text" placeholder="Search..." class="form-input search-input" id="globalSearch">
+        </div>
+        
+        <div class="topbar-user">
+          <div class="user-name" id="userName">User</div>
+          <div class="role-badge" id="userRole">Loading...</div>
+          <div class="user-avatar" id="userAvatar">U</div>
+          <button id="logoutBtn" class="btn-logout">Logout</button>
+        </div>
+      </header>
+
+      <!-- Dashboard View Areas -->
+      <div class="content-area" id="contentArea">
+        
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 1. DASHBOARD TAB                                       -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-dashboard" class="tab-pane active">
+          <!-- Filter Bar -->
+          <div class="filter-bar" id="dashboardFilters">
+            <h2 class="section-title">FILTERS</h2>
+            <div class="filter-row">
+              <div class="filter-item">
+                <select class="form-select filter-select" id="filterVehicleType">
+                  <option value="All">Vehicle Type: All</option>
+                  <option value="Van">Van</option>
+                  <option value="Truck">Truck</option>
+                  <option value="Mini">Mini</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <select class="form-select filter-select" id="filterStatus">
+                  <option value="All">Status: All</option>
+                  <option value="Available">Available</option>
+                  <option value="On Trip">On Trip</option>
+                  <option value="In Shop">In Shop</option>
+                  <option value="Retired">Retired</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <select class="form-select filter-select" id="filterRegion">
+                  <option value="All">Region: All</option>
+                  <option value="Gujarat">Gujarat</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI Stat Cards -->
+          <div class="stat-cards-row stat-cards-4" id="statCards">
+            <div class="stat-card" id="stat-active-vehicles" data-roles="fleet_manager">
+              <div class="stat-card-content">
+                <div class="stat-card-label">Active Vehicles</div>
+                <div class="stat-card-value" id="statActiveVehicles">--</div>
+              </div>
+              <div class="stat-card-icon"><i class="icon">🚛</i></div>
+            </div>
+            <div class="stat-card" id="stat-available-vehicles" data-roles="fleet_manager,driver">
+              <div class="stat-card-content">
+                <div class="stat-card-label">Available Vehicles</div>
+                <div class="stat-card-value" id="statAvailableVehicles">--</div>
+              </div>
+              <div class="stat-card-icon"><i class="icon">🚚</i></div>
+            </div>
+            <div class="stat-card" id="stat-in-maintenance" data-roles="fleet_manager,safety_officer">
+              <div class="stat-card-content">
+                <div class="stat-card-label">In Maintenance</div>
+                <div class="stat-card-value" id="statInMaintenance">--</div>
+              </div>
+              <div class="stat-card-icon"><i class="icon">🔧</i></div>
+            </div>
+            <div class="stat-card" id="stat-active-trips" data-roles="fleet_manager,driver,financial_analyst">
+              <div class="stat-card-content">
+                <div class="stat-card-label">Active Trips</div>
+                <div class="stat-card-value" id="statActiveTrips">--</div>
+              </div>
+              <div class="stat-card-icon"><i class="icon">🗺️</i></div>
+            </div>
+            <div class="stat-card" id="stat-pending-trips" data-roles="fleet_manager,driver">
+              <div class="stat-card-content">
+                <div class="stat-card-label">Pending Trips</div>
+                <div class="stat-card-value" id="statPendingTrips">--</div>
+              </div>
+              <div class="stat-card-icon"><i class="icon">⏳</i></div>
+            </div>
+            <div class="stat-card" id="stat-drivers-duty" data-roles="fleet_manager,safety_officer">
+              <div class="stat-card-content">
+                <div class="stat-card-label">Drivers on Duty</div>
+                <div class="stat-card-value" id="statDriversOnDuty">--</div>
+              </div>
+              <div class="stat-card-icon"><i class="icon">🧑‍✈️</i></div>
+            </div>
+            <div class="stat-card stat-card-accent" id="stat-utilization" data-roles="fleet_manager,financial_analyst">
+              <div class="stat-card-content">
+                <div class="stat-card-label">Fleet Utilization</div>
+                <div class="stat-card-value" id="statFleetUtilization">--</div>
+              </div>
+              <div class="stat-card-icon bg-gradient-info"><i class="icon">📈</i></div>
+            </div>
+            <div class="stat-card stat-card-accent" id="stat-driver-location" data-roles="driver">
+              <div class="stat-card-content">
+                <div class="stat-card-label">Your Live Location</div>
+                <div class="stat-card-value" id="statDriverLocation" style="font-size: 1.25rem;">Fetching...</div>
+              </div>
+              <div class="stat-card-icon bg-gradient-success"><i class="icon">📍</i></div>
+            </div>
+          </div>
+
+          <!-- Recent Trips + Vehicle Status -->
+          <div class="dashboard-split">
+            <div class="dashboard-split-left">
+              <h3 class="section-title">RECENT TRIPS</h3>
+              <div class="data-table-container">
+                <table class="data-table" id="recentTripsTable">
+                  <thead>
+                    <tr>
+                      <th>TRIP</th>
+                      <th>VEHICLE</th>
+                      <th>DRIVER</th>
+                      <th>STATUS</th>
+                      <th>ETA</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recentTripsBody">
+                    <!-- Dynamic content -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="dashboard-split-right">
+              <h3 class="section-title">VEHICLE STATUS</h3>
+              <div class="widget" style="padding: 1rem;">
+                <div style="position: relative; height:300px; width:100%;">
+                  <canvas id="vehicleStatusChartCanvas"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 2. FLEET / VEHICLE REGISTRY TAB                        -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-fleet" class="tab-pane">
+          <div class="tab-header-row">
+            <div class="filter-row">
+              <select class="form-select filter-select" id="fleetFilterType">
+                <option value="All">Type: All</option>
+                <option value="Van">Van</option>
+                <option value="Truck">Truck</option>
+                <option value="Mini">Mini</option>
+              </select>
+              <select class="form-select filter-select" id="fleetFilterStatus">
+                <option value="All">Status: All</option>
+                <option value="Available">Available</option>
+                <option value="On Trip">On Trip</option>
+                <option value="In Shop">In Shop</option>
+                <option value="Retired">Retired</option>
+              </select>
+              <input type="text" class="form-input search-input" placeholder="Search reg. no..." id="fleetSearch">
+            </div>
+            <button class="btn btn-accent btn-md" id="addVehicleBtn">+ Add Vehicle</button>
+          </div>
+
+          <div class="data-table-container">
+            <table class="data-table" id="vehicleTable">
+              <thead>
+                <tr>
+                  <th>REG. NO. (UNIQUE)</th>
+                  <th>NAME/MODEL</th>
+                  <th>TYPE</th>
+                  <th>CAPACITY</th>
+                  <th>ODOMETER</th>
+                  <th>ACQ. COST</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="vehicleTableBody">
+                <!-- Dynamic content -->
+              </tbody>
+            </table>
+          </div>
+          <p class="rule-annotation">Rule: Registration No. must be unique · Retired/In Shop vehicles are hidden from Trip Dispatcher</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 3. DRIVERS & SAFETY PROFILES TAB                       -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-drivers" class="tab-pane">
+          <div class="tab-header-row">
+            <h2 class="section-title" style="margin: 0;">Drivers & Safety Profiles</h2>
+            <button class="btn btn-accent btn-md" id="addDriverBtn">+ Add Driver</button>
+          </div>
+
+          <div class="data-table-container">
+            <table class="data-table" id="driverTable">
+              <thead>
+                <tr>
+                  <th>DRIVER</th>
+                  <th>LICENSE NO</th>
+                  <th>CATEGORY</th>
+                  <th>EXPIRY</th>
+                  <th>CONTACT</th>
+                  <th>TRIP COMPL.</th>
+                  <th>SAFETY</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="driverTableBody">
+                <!-- Dynamic content -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="toggle-stat-group" id="driverToggleStats">
+            <span class="toggle-label">TOGGLE STAT</span>
+            <button class="toggle-stat-btn toggle-available active" data-status="All">All</button>
+            <button class="toggle-stat-btn toggle-available" data-status="Available">Available</button>
+            <button class="toggle-stat-btn toggle-on-trip" data-status="On Trip">On Trip</button>
+            <button class="toggle-stat-btn toggle-off-duty" data-status="Off Duty">Off Duty</button>
+            <button class="toggle-stat-btn toggle-suspended" data-status="Suspended">Suspended</button>
+          </div>
+          <p class="rule-annotation">Rule: Expired license or Suspended status → blocked from trip assignment</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 4. TRIP DISPATCHER TAB                                 -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-trips" class="tab-pane">
+          <!-- Trip Lifecycle Stepper -->
+          <div class="lifecycle-stepper" id="tripLifecycle">
+            <div class="step-item step-active" data-step="Draft">
+              <div class="step-dot dot-green"></div>
+              <span class="step-label">Draft</span>
+            </div>
+            <div class="step-line step-line-active"></div>
+            <div class="step-item step-active" data-step="Dispatched">
+              <div class="step-dot dot-blue"></div>
+              <span class="step-label">Dispatched</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item" data-step="Completed">
+              <div class="step-dot dot-gray"></div>
+              <span class="step-label">Completed</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step-item" data-step="Cancelled">
+              <div class="step-dot dot-gray"></div>
+              <span class="step-label">Cancelled</span>
+            </div>
+          </div>
+
+          <div class="split-layout">
+            <!-- Create Trip Form -->
+            <div class="split-left">
+              <h3 class="section-title">CREATE TRIP</h3>
+              <form id="createTripForm">
+                <div class="form-group">
+                  <label class="form-label">SOURCE</label>
+                  <input type="text" class="form-input" id="tripSource" placeholder="e.g., Gandhinagar Depot" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">DESTINATION</label>
+                  <input type="text" class="form-input" id="tripDestination" placeholder="e.g., Ahmedabad Hub" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">VEHICLE (AVAILABLE ONLY)</label>
+                  <select class="form-select" id="tripVehicle">
+                    <option value="">Select vehicle...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">DRIVER (AVAILABLE ONLY)</label>
+                  <select class="form-select" id="tripDriver">
+                    <option value="">Select driver...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">CARGO WEIGHT (KG)</label>
+                  <input type="number" class="form-input" id="tripCargoWeight" placeholder="e.g., 700" min="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">PLANNED DISTANCE (KM)</label>
+                  <input type="number" class="form-input" id="tripDistance" placeholder="e.g., 38" min="0">
+                </div>
+
+                <!-- Capacity Validation -->
+                <div class="validation-box" id="capacityValidation" style="display: none;">
+                  <div id="capacityDetails"></div>
+                </div>
+
+                <div class="form-row" style="margin-top: 1rem;">
+                  <button type="submit" class="btn btn-accent btn-md" id="dispatchBtn">Dispatch</button>
+                  <button type="button" class="btn btn-ghost btn-md" id="cancelTripBtn">Cancel</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Live Board -->
+            <div class="split-right">
+              <h3 class="section-title">LIVE BOARD</h3>
+              <div class="live-board" id="liveBoard">
+                <!-- Dynamic trip cards -->
+              </div>
+              <p class="rule-annotation" style="margin-top: 1rem;">On Complete: odometer → fuel log → expenses → Vehicle & Driver Available</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 5. MAINTENANCE TAB                                     -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-maintenance" class="tab-pane">
+          <div class="split-layout">
+            <!-- Log Service Record -->
+            <div class="split-left">
+              <h3 class="section-title">LOG SERVICE RECORD</h3>
+              <form id="createMaintenanceForm">
+                <div class="form-group">
+                  <label class="form-label">VEHICLE</label>
+                  <select class="form-select" id="maintVehicle" required>
+                    <option value="">Select vehicle...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">SERVICE TYPE</label>
+                  <input type="text" class="form-input" id="maintServiceType" placeholder="e.g., Oil Change" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">COST</label>
+                  <input type="number" class="form-input" id="maintCost" placeholder="e.g., 2500" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">DATE</label>
+                  <input type="date" class="form-input" id="maintDate" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">STATUS</label>
+                  <select class="form-select" id="maintStatus">
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-accent" id="saveMaintBtn">Save</button>
+              </form>
+
+              <!-- Status transition -->
+              <div class="transition-flow">
+                <div class="transition-item">
+                  <span class="transition-label-green">Available</span>
+                  <span class="transition-arrow">→ creating active record →</span>
+                  <span class="transition-label-blue">In Shop</span>
+                </div>
+                <div class="transition-item">
+                  <span class="transition-label-blue">In Shop</span>
+                  <span class="transition-arrow">→ closing record/mark completed →</span>
+                  <span class="transition-label-green">Available</span>
+                </div>
+              </div>
+              <p class="rule-annotation">Note: In Shop vehicles are removed from the dispatch pool.</p>
+            </div>
+
+            <!-- Service Log Table -->
+            <div class="split-right">
+              <h3 class="section-title">SERVICE LOG</h3>
+              <div class="data-table-container">
+                <table class="data-table" id="maintenanceTable">
+                  <thead>
+                    <tr>
+                      <th>VEHICLE</th>
+                      <th>SERVICE</th>
+                      <th>COST</th>
+                      <th>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody id="maintenanceTableBody">
+                    <!-- Dynamic content -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 6. FUEL & EXPENSES TAB                                 -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-fuel" class="tab-pane">
+          <!-- Fuel Logs -->
+          <div class="tab-header-row">
+            <h3 class="section-title" style="margin: 0;">FUEL LOGS</h3>
+            <div class="btn-group">
+              <button class="btn btn-green btn-md" id="addFuelBtn">+ Log Fuel</button>
+              <button class="btn btn-accent btn-md" id="addExpenseBtn">+ Add Expense</button>
+            </div>
+          </div>
+
+          <div class="data-table-container">
+            <table class="data-table" id="fuelTable">
+              <thead>
+                <tr>
+                  <th>VEHICLE</th>
+                  <th>DATE</th>
+                  <th>LITERS</th>
+                  <th>FUEL COST</th>
+                </tr>
+              </thead>
+              <tbody id="fuelTableBody">
+                <!-- Dynamic content -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Other Expenses -->
+          <h3 class="section-title" style="margin-top: 2rem;">OTHER EXPENSES (TOLL / MISC)</h3>
+          <div class="data-table-container">
+            <table class="data-table" id="expenseTable">
+              <thead>
+                <tr>
+                  <th>TRIP</th>
+                  <th>VEHICLE</th>
+                  <th>TOLL</th>
+                  <th>OTHER</th>
+                  <th>MAINT. (LINKED)</th>
+                  <th>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody id="expenseTableBody">
+                <!-- Dynamic content -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="total-cost-bar" id="totalCostBar">
+            <span>TOTAL OPERATIONAL COST (AUTO) = FUEL + MAINT</span>
+            <span class="total-cost-value" id="totalOperationalCost">₹0</span>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 7. ANALYTICS / REPORTS TAB                             -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-analytics" class="tab-pane">
+          <!-- KPI Cards -->
+          <div class="stat-cards-row stat-cards-4" id="analyticsStats">
+            <div class="stat-card">
+              <div class="stat-card-content">
+                <div class="stat-card-label">FUEL EFFICIENCY</div>
+                <div class="stat-card-value" id="analyticsFuelEfficiency">--</div>
+              </div>
+              <div class="stat-card-icon bg-gradient-info"><i class="icon">⛽</i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-content">
+                <div class="stat-card-label">FLEET UTILIZATION</div>
+                <div class="stat-card-value" id="analyticsFleetUtil">--</div>
+              </div>
+              <div class="stat-card-icon bg-gradient-success"><i class="icon">📈</i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-content">
+                <div class="stat-card-label">OPERATIONAL COST</div>
+                <div class="stat-card-value" id="analyticsOpCost">--</div>
+              </div>
+              <div class="stat-card-icon bg-gradient-warning"><i class="icon">📉</i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-content">
+                <div class="stat-card-label">VEHICLE ROI</div>
+                <div class="stat-card-value" id="analyticsROI">--</div>
+              </div>
+              <div class="stat-card-icon"><i class="icon">📊</i></div>
+            </div>
+          </div>
+
+          <p class="roi-formula">ROI = (Revenue − (Maintenance + Fuel)) / Acquisition Cost</p>
+
+          <div class="dashboard-split">
+            <!-- Monthly Revenue Chart -->
+            <div class="dashboard-split-left">
+              <h3 class="section-title">MONTHLY REVENUE</h3>
+              <div class="widget" style="padding: 1rem;">
+                <div style="position: relative; height:300px; width:100%;">
+                  <canvas id="monthlyRevenueChartCanvas"></canvas>
+                </div>
+              </div>
+            </div>
+            <!-- Costliest Vehicles -->
+            <div class="dashboard-split-right">
+              <h3 class="section-title">TOP COSTLIEST VEHICLES</h3>
+              <div class="widget" style="padding: 1rem;">
+                <div style="position: relative; height:300px; width:100%;">
+                  <canvas id="costliestVehiclesChartCanvas"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- 8. SETTINGS & RBAC TAB                                 -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <div id="tab-settings" class="tab-pane">
+          <div class="dashboard-split" style="grid-template-columns: 250px 1fr; align-items: start;">
+            
+            <!-- Settings Sidebar -->
+            <div class="widget" style="padding: 1rem;">
+              <ul class="settings-nav">
+                <li class="settings-nav-item active" data-target="set-general">General Info</li>
+                <li class="settings-nav-item" data-target="set-password">Change Password</li>
+                <li class="settings-nav-item" data-target="set-security">Security & 2FA</li>
+                <li class="settings-nav-item" data-target="set-delete" style="color: var(--status-red);">Delete Account</li>
+              </ul>
+            </div>
+
+            <!-- Settings Content -->
+            <div class="settings-content">
+              <!-- General Info -->
+              <div class="widget settings-section" id="set-general">
+                <h3 class="section-title">GENERAL INFO</h3>
+                <form id="settingsForm">
+                  <div class="form-group">
+                    <label class="form-label">DEPOT NAME</label>
+                    <input type="text" class="form-input" id="settingDepotName" value="Gandhinagar Depot GJ4">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">CURRENCY</label>
+                    <input type="text" class="form-input" id="settingCurrency" value="INR (Rs.)">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">DISTANCE UNIT</label>
+                    <input type="text" class="form-input" id="settingDistanceUnit" value="Kilometers">
+                  </div>
+                  <button type="submit" class="btn btn-blue">Save changes</button>
+                </form>
+              </div>
+
+              <!-- Change Password -->
+              <div class="widget settings-section" id="set-password" style="display:none; margin-top: 1.5rem;">
+                <h3 class="section-title">CHANGE PASSWORD</h3>
+                <form id="passwordForm">
+                  <div class="form-group">
+                    <label class="form-label">CURRENT PASSWORD</label>
+                    <input type="password" class="form-input" id="profileCurrentPassword" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">NEW PASSWORD</label>
+                    <input type="password" class="form-input" id="profileNewPassword" required minlength="6">
+                    <div class="password-meter"><div class="password-meter-fill" id="pwdMeter"></div></div>
+                    <small style="font-size: 0.75rem; color: var(--text-secondary);" id="pwdStrengthTxt">Enter at least 6 characters</small>
+                  </div>
+                  <button type="submit" class="btn btn-primary" style="background: var(--status-red); box-shadow: none;">Update Password</button>
+                </form>
+              </div>
+
+              <!-- Security & 2FA -->
+              <div class="widget settings-section" id="set-security" style="display:none; margin-top: 1.5rem;">
+                <h3 class="section-title">SECURITY & 2FA</h3>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                  <label class="toggle-switch-row">
+                    <span class="toggle-switch-label">Two-Factor Authentication (2FA)</span>
+                    <input type="checkbox" class="toggle-switch-input">
+                  </label>
+                  <label class="toggle-switch-row">
+                    <span class="toggle-switch-label">Login Notifications</span>
+                    <input type="checkbox" checked class="toggle-switch-input">
+                  </label>
+                  <label class="toggle-switch-row">
+                    <span class="toggle-switch-label">Data Privacy Mode</span>
+                    <input type="checkbox" class="toggle-switch-input">
+                  </label>
+                </div>
+              </div>
+
+              <!-- Delete Account -->
+              <div class="widget settings-section" id="set-delete" style="display:none; margin-top: 1.5rem; border: 1px solid var(--status-red);">
+                <h3 class="section-title" style="color: var(--status-red);">DANGER ZONE</h3>
+                <p style="font-size: 0.9rem; margin-bottom: 1rem; color: var(--text-secondary);">Once you delete your account, there is no going back. Please be certain.</p>
+                <button type="button" class="btn btn-primary" style="background: var(--status-red);" id="btnDeleteAccount">Deactivate Account</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <!-- ==========================================
+           TAB: PROFILE
+      =========================================== -->
+      <div id="tab-profile" class="tab-pane" style="display: none;">
+        <div class="profile-header">
+          <div class="profile-bg-image" style="background-image: url('https://images.unsplash.com/photo-1531512073830-ba890ca4eba2?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');">
+            <div class="profile-mask"></div>
+          </div>
+          <div class="profile-info-card">
+            <div class="profile-avatar">
+              <span class="avatar-initials" id="profileInitials">RS</span>
+            </div>
+            <div class="profile-text">
+              <h4 id="profileHeaderName">Raj Singh</h4>
+              <p id="profileHeaderRole">Fleet Manager</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stat-cards-row stat-cards-4" style="margin-bottom: 2rem;">
+          <div class="stat-card" style="border-top-color: transparent;">
+            <div class="stat-card-content"><div class="stat-card-label">TRIPS COMPLETED</div><div class="stat-card-value">324</div></div>
+          </div>
+          <div class="stat-card" style="border-top-color: transparent;">
+            <div class="stat-card-content"><div class="stat-card-label">RATING</div><div class="stat-card-value">4.9/5</div></div>
+          </div>
+          <div class="stat-card" style="border-top-color: transparent;">
+            <div class="stat-card-content"><div class="stat-card-label">HOURS LOGGED</div><div class="stat-card-value">84h</div></div>
+          </div>
+        </div>
+
+        <div class="dashboard-split" style="grid-template-columns: 1fr 1fr;">
+          <!-- Profile Info -->
+          <div class="widget">
+            <h3 class="section-title" style="margin-bottom: 1.5rem;">UPDATE DETAILS</h3>
+            <form id="profileForm">
+              <div class="form-group">
+                <label class="form-label">FULL NAME</label>
+                <input type="text" class="form-input" id="profileName" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">EMAIL ADDRESS</label>
+                <input type="email" class="form-input" id="profileEmail" required>
+              </div>
+              <button type="submit" class="btn btn-primary" id="saveProfileBtn">Update Profile</button>
+            </form>
+          </div>
+          
+          <!-- Platform Settings -->
+          <div class="widget">
+            <h3 class="section-title" style="margin-bottom: 1.5rem;">PLATFORM SETTINGS</h3>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">ACCOUNT</div>
+              <label class="toggle-switch-row">
+                <span class="toggle-switch-label">Email me when a driver logs a trip</span>
+                <input type="checkbox" checked class="toggle-switch-input">
+              </label>
+              <label class="toggle-switch-row">
+                <span class="toggle-switch-label">Email me about vehicle maintenance alerts</span>
+                <input type="checkbox" class="toggle-switch-input">
+              </label>
+              <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-top: 1rem;">APPLICATION</div>
+              <label class="toggle-switch-row">
+                <span class="toggle-switch-label">Subscribe to newsletter</span>
+                <input type="checkbox" checked class="toggle-switch-input">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB: LIVE TRACKING
+      =========================================== -->
+      <div id="tab-tracking" class="tab-pane" style="display: none;">
+        <h2 class="section-title">Live Fleet Tracking</h2>
+        <div class="filter-bar">
+          <div class="filter-row">
+            <span class="step-label dot-blue" style="display:inline-flex; align-items:center; gap:0.5rem;"><span class="step-dot dot-blue"></span> Real-time GPS Location</span>
+            <span class="step-label dot-green" style="display:inline-flex; align-items:center; gap:0.5rem; margin-left:1rem;"><span class="step-dot dot-green"></span> Auto-updating every 15s</span>
+          </div>
+        </div>
+        <div id="mapContainer" style="height: 600px; width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); z-index: 1;"></div>
+      </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal-overlay" id="modalOverlay" style="display: none;">
+    <div class="modal" id="modalContent">
+      <div class="modal-header">
+        <h3 id="modalTitle">Modal</h3>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Dynamic form content -->
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
