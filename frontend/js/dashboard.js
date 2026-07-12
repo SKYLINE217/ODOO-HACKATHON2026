@@ -9,6 +9,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     initDashboard(cachedUser);
   }
 
+  // ── Tab Navigation Event Listeners ──
+  // Attach once on load so they are ready for firstVisible.click()
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      navItems.forEach(nav => nav.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+      
+      item.classList.add('active');
+      
+      const tabName = item.getAttribute('data-tab');
+      const targetId = 'tab-' + tabName;
+      const targetPane = document.getElementById(targetId);
+      if (targetPane) {
+        targetPane.classList.add('active');
+        loadTabData(tabName);
+      }
+    });
+  });
+
   try {
     const user = await apiFetch('/auth/me');
     sessionStorage.setItem('user', JSON.stringify(user));
@@ -17,15 +39,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('appLayout').style.display = 'flex';
     
-    // Load initial tab data
-    if (user.role === 'fleet_manager') {
-      document.querySelector('[data-tab="dashboard"]').classList.remove('active');
-      document.getElementById('tab-dashboard').classList.remove('active');
-      document.querySelector('[data-tab="tracking"]').classList.add('active');
-      document.getElementById('tab-tracking').classList.add('active');
-      loadTabData('tracking');
-    } else {
-      loadTabData('dashboard');
+    // Load initial tab data based on RBAC visibility
+    const navs = Array.from(document.querySelectorAll('.nav-item'));
+    const firstVisible = navs.find(nav => nav.style.display !== 'none');
+    if (firstVisible) {
+      firstVisible.click();
     }
   } catch (err) {
     showToast('Failed to load profile data', 'error');
@@ -56,27 +74,6 @@ function initDashboard(user) {
         item.style.display = item.classList.contains('nav-item') ? 'flex' : '';
       }
     }
-  });
-
-  // Tab Navigation Logic
-  const navItems = document.querySelectorAll('.nav-item');
-  navItems.forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.preventDefault();
-      
-      navItems.forEach(nav => nav.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-      
-      item.classList.add('active');
-      
-      const tabName = item.getAttribute('data-tab');
-      const targetId = 'tab-' + tabName;
-      const targetPane = document.getElementById(targetId);
-      if (targetPane) {
-        targetPane.classList.add('active');
-        loadTabData(tabName);
-      }
-    });
   });
 }
 
@@ -435,6 +432,33 @@ async function loadProfile() {
     document.getElementById('profileHeaderName').textContent = user.name || 'User';
     document.getElementById('profileHeaderRole').textContent = (user.role || 'Role').replace('_', ' ').toUpperCase();
     document.getElementById('profileInitials').textContent = (user.name || 'U').substring(0, 2).toUpperCase();
+  }
+
+  // Populate dynamic stats
+  if (user.email && user.email.endsWith('@transitops.demo')) {
+    // Interrelated stats for demo users
+    if (user.role === 'fleet_manager') {
+      document.getElementById('profileTripsVal').textContent = '1,204';
+      document.getElementById('profileRatingVal').textContent = '4.9/5';
+      document.getElementById('profileHoursVal').textContent = '1,024h';
+    } else if (user.role === 'driver') {
+      document.getElementById('profileTripsVal').textContent = '324';
+      document.getElementById('profileRatingVal').textContent = '4.8/5';
+      document.getElementById('profileHoursVal').textContent = '84h';
+    } else if (user.role === 'safety_officer') {
+      document.getElementById('profileTripsVal').textContent = '115';
+      document.getElementById('profileRatingVal').textContent = '5.0/5';
+      document.getElementById('profileHoursVal').textContent = '340h';
+    } else {
+      document.getElementById('profileTripsVal').textContent = '42';
+      document.getElementById('profileRatingVal').textContent = '4.9/5';
+      document.getElementById('profileHoursVal').textContent = '512h';
+    }
+  } else {
+    // Fresh and clean for new users
+    document.getElementById('profileTripsVal').textContent = '0';
+    document.getElementById('profileRatingVal').textContent = 'N/A';
+    document.getElementById('profileHoursVal').textContent = '0h';
   }
 }
 

@@ -18,13 +18,13 @@
   <div class="app-layout" id="appLayout" style="display: none;">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <div class="sidebar-brand">
+      <a href="dashboard.html" class="sidebar-brand" style="text-decoration: none; color: inherit;">
         <div class="topbar-logo">TO</div>
         <div class="topbar-title">Transit<span>Ops</span></div>
-      </div>
+      </a>
       
       <nav class="sidebar-nav" id="sidebarNav">
-        <a href="#" class="nav-item active" data-tab="dashboard" id="nav-dashboard">
+        <a href="#" class="nav-item" data-tab="dashboard" data-roles="fleet_manager" id="nav-dashboard">
           <span class="nav-icon">📊</span> Dashboard
         </a>
         <a href="#" class="nav-item" data-tab="fleet" data-roles="fleet_manager" id="nav-fleet">
@@ -662,13 +662,13 @@
         <!-- Stats Row -->
         <div class="stat-cards-row stat-cards-4" style="margin-bottom: 2rem;">
           <div class="stat-card" style="border-top-color: transparent;">
-            <div class="stat-card-content"><div class="stat-card-label">TRIPS COMPLETED</div><div class="stat-card-value">324</div></div>
+            <div class="stat-card-content"><div class="stat-card-label">TRIPS COMPLETED</div><div class="stat-card-value" id="profileTripsVal">--</div></div>
           </div>
           <div class="stat-card" style="border-top-color: transparent;">
-            <div class="stat-card-content"><div class="stat-card-label">RATING</div><div class="stat-card-value">4.9/5</div></div>
+            <div class="stat-card-content"><div class="stat-card-label">RATING</div><div class="stat-card-value" id="profileRatingVal">--</div></div>
           </div>
           <div class="stat-card" style="border-top-color: transparent;">
-            <div class="stat-card-content"><div class="stat-card-label">HOURS LOGGED</div><div class="stat-card-value">84h</div></div>
+            <div class="stat-card-content"><div class="stat-card-label">HOURS LOGGED</div><div class="stat-card-value" id="profileHoursVal">--</div></div>
           </div>
         </div>
 
