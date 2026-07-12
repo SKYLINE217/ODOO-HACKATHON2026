@@ -9,7 +9,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const BACKEND_DIR = path.join(__dirname, 'concept', 'backend');
+const BACKEND_DIR = __dirname;
 const ENV_PATH = path.join(BACKEND_DIR, '.env');
 const SCHEMA_PATH = path.join(BACKEND_DIR, 'src', 'scripts', 'schema.sql');
 
