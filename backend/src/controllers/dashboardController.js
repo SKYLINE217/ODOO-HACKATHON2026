@@ -69,7 +69,10 @@ exports.updateVehicle = async (req, res, next) => {
     }
 
     params.push(id);
-    await db.query(`UPDATE vehicles SET ${updates.join(', ')} WHERE id = ?`, params);
+    const result = await db.query(`UPDATE vehicles SET ${updates.join(', ')} WHERE id = ?`, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, error: { message: 'Vehicle not found.' } });
+    }
     res.json({ success: true, data: { message: 'Vehicle updated.' } });
   } catch (err) { next(err); }
 };
@@ -126,7 +129,10 @@ exports.updateDriverStatus = async (req, res, next) => {
     }
 
     params.push(id);
-    await db.query(`UPDATE drivers SET ${updates.join(', ')} WHERE id = ?`, params);
+    const result = await db.query(`UPDATE drivers SET ${updates.join(', ')} WHERE id = ?`, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, error: { message: 'Driver not found.' } });
+    }
     res.json({ success: true, data: { message: 'Driver updated.' } });
   } catch (err) { next(err); }
 };
@@ -287,6 +293,11 @@ exports.updateMaintenance = async (req, res, next) => {
     await conn.beginTransaction();
     const { id } = req.params;
     const { status } = req.body;
+    
+    if (!status) {
+      await conn.rollback(); conn.release();
+      return res.status(400).json({ success: false, error: { message: 'Status is required.' } });
+    }
 
     const [rows] = await conn.execute('SELECT * FROM maintenance_records WHERE id = ?', [id]);
     const record = rows[0];
@@ -613,8 +624,8 @@ exports.exportCsv = async (req, res, next) => {
       return res.status(400).json({ success: false, error: { message: 'Invalid table for export.' } });
     }
 
-    const [rows] = await db.query(`SELECT * FROM ${table} ORDER BY id DESC`);
-    if (rows.length === 0) {
+    const rows = await db.query(`SELECT * FROM ${table} ORDER BY id DESC`);
+    if (!rows || rows.length === 0) {
       return res.status(404).json({ success: false, error: { message: 'No data to export.' } });
     }
 

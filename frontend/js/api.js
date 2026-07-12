@@ -36,6 +36,13 @@ async function apiFetch(path, options = {}) {
   return json.data; // Unwrap the { success, data } envelope
 }
 
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  const div = document.createElement('div');
+  div.innerText = str;
+  return div.innerHTML;
+}
+
 /* ── Toast notification system ── */
 function showToast(message, type = 'error') {
   let container = document.querySelector('.toast-container');
@@ -55,7 +62,7 @@ function showToast(message, type = 'error') {
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `
     <span class="toast-icon">${icons[type] || icons.info}</span>
-    <span>${message}</span>
+    <span>${escapeHTML(message)}</span>
   `;
 
   container.appendChild(toast);

@@ -39,7 +39,7 @@ router.post('/maintenance', requireRole(['fleet_manager']), ctrl.createMaintenan
 router.put('/maintenance/:id', requireRole(['fleet_manager']), ctrl.updateMaintenance);
 
 // ── Fuel Logs (Driver + Fleet Manager + Financial Analyst) ────────────────────────
-router.get('/fuel-logs', requireRole(['fleet_manager', 'driver', 'financial_analyst']), ctrl.getFuelLogs);
+router.get('/fuel-logs', requireRole(['fleet_manager', 'financial_analyst']), ctrl.getFuelLogs);
 router.post('/fuel-logs', requireRole(['fleet_manager', 'driver']), ctrl.createFuelLog);
 
 // ── Expenses (Financial Analyst + Fleet Manager) ──────────────

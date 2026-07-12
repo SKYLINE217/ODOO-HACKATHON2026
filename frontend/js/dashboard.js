@@ -213,9 +213,25 @@ async function loadDrivers() {
 
 // ── 4. Trips ──
 // CSV Export
-document.getElementById('exportFleetCsvBtn')?.addEventListener('click', () => {
+document.getElementById('exportFleetCsvBtn')?.addEventListener('click', async () => {
   const token = sessionStorage.getItem('token');
-  window.open(`${API_BASE}/dashboard/export/vehicles?token=${token}`, '_blank');
+  try {
+    const res = await fetch(`${API_BASE}/dashboard/export/vehicles`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vehicles_export.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 });
 
 async function loadTrips() {
@@ -239,11 +255,11 @@ async function loadTrips() {
   // Populate Dropdowns for Create Form
   const vehicles = await apiFetch('/dashboard/vehicles?status=Available');
   const vSelect = document.getElementById('tripVehicle');
-  vSelect.innerHTML = '<option value="">Select vehicle...</option>' + vehicles.map(v => `<option value="${v.id}" data-cap="${v.capacity_kg}">${v.name_model} - ${v.capacity}</option>`).join('');
+  vSelect.innerHTML = '<option value="">Select vehicle...</option>' + vehicles.map(v => `<option value="${v.id}" data-cap="${v.capacity_kg}">${escapeHTML(v.name_model)} - ${escapeHTML(v.capacity)}</option>`).join('');
   
   const drivers = await apiFetch('/dashboard/drivers?status=Available');
   const dSelect = document.getElementById('tripDriver');
-  dSelect.innerHTML = '<option value="">Select driver...</option>' + drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+  dSelect.innerHTML = '<option value="">Select driver...</option>' + drivers.map(d => `<option value="${d.id}">${escapeHTML(d.name)}</option>`).join('');
 }
 
 document.getElementById('createTripForm')?.addEventListener('submit', async (e) => {
@@ -413,6 +429,13 @@ async function loadProfile() {
   const user = getStoredUser();
   document.getElementById('profileName').value = user.name || '';
   document.getElementById('profileEmail').value = user.email || '';
+  
+  // Populate the header info
+  if (document.getElementById('profileHeaderName')) {
+    document.getElementById('profileHeaderName').textContent = user.name || 'User';
+    document.getElementById('profileHeaderRole').textContent = (user.role || 'Role').replace('_', ' ').toUpperCase();
+    document.getElementById('profileInitials').textContent = (user.name || 'U').substring(0, 2).toUpperCase();
+  }
 }
 
 document.getElementById('profileForm')?.addEventListener('submit', async (e) => {
@@ -533,113 +556,7 @@ function getTripBadgeClass(status) {
   }
 }
 
-// ── GPS Tracking Logic ──
-let trackingMap = null;
-let trackingMarkers = {};
-let trackingInterval = null;
-
-async function loadTracking() {
-  // Initialize map once
-  if (!trackingMap) {
-    trackingMap = L.map('mapContainer').setView([22.2587, 71.1924], 6); // Centered on Gujarat area
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 18
-    }).addTo(trackingMap);
-    
-    // Fix Leaflet's default icon path issues when using CDN without proper image roots
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
-  }
-
-  // Force map to recalculate its size in case the container was hidden when initialized
-  setTimeout(() => {
-    trackingMap.invalidateSize();
-  }, 300);
-
-  // Initial fetch
-  await fetchAndRenderLocations();
-
-  // Setup SSE for push updates
-  if (!window.trackingSSE) {
-    const token = sessionStorage.getItem('token');
-    const sseUrl = `${API_BASE}/tracking/stream?token=${token}`;
-    window.trackingSSE = new EventSource(sseUrl);
-    
-    window.trackingSSE.onmessage = (event) => {
-      try {
-        const loc = JSON.parse(event.data);
-        renderLocationMarker(loc);
-      } catch (err) {
-        console.error('SSE parsing error', err);
-      }
-    };
-    
-    window.trackingSSE.onerror = (err) => {
-      console.error('SSE connection error, closing', err);
-      window.trackingSSE.close();
-      window.trackingSSE = null;
-    };
-  }
-
-  // Fallback poll just for reconciliation
-  if (trackingInterval) clearInterval(trackingInterval);
-  trackingInterval = setInterval(fetchAndRenderLocations, 60000);
-}
-
-function renderLocationMarker(loc) {
-  const latLng = [loc.latitude, loc.longitude];
-  const popupHTML = `
-    <div style="font-family: var(--font-primary); font-size: 0.9rem;">
-      <strong style="color: var(--status-blue);">${loc.reg_no}</strong><br>
-      <span style="color: var(--text-muted); font-size: 0.8rem;">Driver:</span> ${loc.driver_name || 'N/A'}<br>
-      <span style="color: var(--text-muted); font-size: 0.8rem;">Route:</span> ${loc.source || '?'} &rarr; ${loc.destination || '?'}<br>
-      <span style="color: var(--text-muted); font-size: 0.75rem; margin-top: 5px; display: block;">
-        Updated: ${new Date(loc.recorded_at).toLocaleTimeString()}
-      </span>
-    </div>
-  `;
-
-  if (trackingMarkers[loc.vehicle_id]) {
-    trackingMarkers[loc.vehicle_id].setLatLng(latLng);
-    trackingMarkers[loc.vehicle_id].setPopupContent(popupHTML);
-  } else {
-    const marker = L.marker(latLng).addTo(trackingMap);
-    marker.bindPopup(popupHTML);
-    trackingMarkers[loc.vehicle_id] = marker;
-  }
-}
-
-async function fetchAndRenderLocations() {
-  try {
-    const locations = await apiFetch('/tracking/active');
-    locations.forEach(loc => renderLocationMarker(loc));
-  } catch (err) {
-    console.error('Error fetching live tracking data:', err);
-  }
-}
-
-// Ensure polling and SSE stops if user navigates to another tab
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', (e) => {
-    const tabName = item.getAttribute('data-tab');
-    if (tabName !== 'tracking') {
-      if (trackingInterval) {
-        clearInterval(trackingInterval);
-        trackingInterval = null;
-      }
-      if (window.trackingSSE) {
-        window.trackingSSE.close();
-        window.trackingSSE = null;
-      }
-    }
-  });
-});
+// GPS Tracking Logic removed as requested.
 
 // ── Modal UI Logic & Forms ──
 function showModal(title, formHTML, onSubmit) {
@@ -677,13 +594,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const formHTML = `
         <form id="addVehicleForm">
           <div class="form-group"><label class="form-label">Reg. No</label><input type="text" name="reg_no" class="form-input" required></div>
-          <div class="form-group"><label class="form-label">Name/Model</label><input type="text" name="name" class="form-input" required></div>
+          <div class="form-group"><label class="form-label">Name/Model</label><input type="text" name="name_model" class="form-input" required></div>
           <div class="form-group"><label class="form-label">Type</label>
             <select name="type" class="form-select">
               <option value="Van">Van</option><option value="Truck">Truck</option><option value="Mini">Mini</option>
             </select>
           </div>
-          <div class="form-group"><label class="form-label">Capacity (kg)</label><input type="number" name="capacity" class="form-input" required></div>
+          <div class="form-group"><label class="form-label">Size Category</label>
+            <select name="capacity" class="form-select">
+              <option value="Small">Small</option><option value="Medium">Medium</option><option value="Large">Large</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Capacity (kg)</label><input type="number" name="capacity_kg" class="form-input" required></div>
           <div class="form-group"><label class="form-label">Acquisition Cost</label><input type="number" name="acquisition_cost" class="form-input" required></div>
           <button type="submit" class="btn btn-primary">Save Vehicle</button>
         </form>
@@ -691,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showModal('Add New Vehicle', formHTML, async (e, form) => {
         const fd = new FormData(form);
         const payload = Object.fromEntries(fd.entries());
-        payload.capacity = Number(payload.capacity);
+        payload.capacity_kg = Number(payload.capacity_kg);
         payload.acquisition_cost = Number(payload.acquisition_cost);
         
         try {
@@ -712,9 +634,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <form id="addDriverForm">
           <div class="form-group"><label class="form-label">Full Name</label><input type="text" name="name" class="form-input" required></div>
           <div class="form-group"><label class="form-label">License No</label><input type="text" name="license_no" class="form-input" required></div>
-          <div class="form-group"><label class="form-label">License Category</label><input type="text" name="license_category" class="form-input" required></div>
+          <div class="form-group"><label class="form-label">License Category</label><input type="text" name="category" class="form-input" required></div>
           <div class="form-group"><label class="form-label">License Expiry</label><input type="date" name="license_expiry" class="form-input" required></div>
-          <div class="form-group"><label class="form-label">Contact</label><input type="text" name="contact_number" class="form-input" required></div>
+          <div class="form-group"><label class="form-label">Contact</label><input type="text" name="contact" class="form-input" required></div>
           <button type="submit" class="btn btn-primary">Save Driver</button>
         </form>
       `;
@@ -739,7 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="form-group"><label class="form-label">Vehicle ID</label><input type="number" name="vehicle_id" class="form-input" required></div>
           <div class="form-group"><label class="form-label">Date</label><input type="date" name="log_date" class="form-input" required></div>
           <div class="form-group"><label class="form-label">Liters</label><input type="number" step="0.1" name="liters" class="form-input" required></div>
-          <div class="form-group"><label class="form-label">Cost</label><input type="number" step="0.01" name="cost" class="form-input" required></div>
+          <div class="form-group"><label class="form-label">Cost</label><input type="number" step="0.01" name="fuel_cost" class="form-input" required></div>
           <button type="submit" class="btn btn-primary">Save Fuel Log</button>
         </form>
       `;
@@ -748,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = Object.fromEntries(fd.entries());
         payload.vehicle_id = Number(payload.vehicle_id);
         payload.liters = Number(payload.liters);
-        payload.cost = Number(payload.cost);
+        payload.fuel_cost = Number(payload.fuel_cost);
         
         try {
           await apiFetch('/dashboard/fuel-logs', { method: 'POST', body: JSON.stringify(payload) });
@@ -765,16 +687,20 @@ document.addEventListener('DOMContentLoaded', () => {
     addExpenseBtn.addEventListener('click', () => {
       const formHTML = `
         <form id="addExpenseForm">
-          <div class="form-group"><label class="form-label">Category</label><input type="text" name="category" class="form-input" required></div>
-          <div class="form-group"><label class="form-label">Amount</label><input type="number" step="0.01" name="amount" class="form-input" required></div>
-          <div class="form-group"><label class="form-label">Date</label><input type="date" name="expense_date" class="form-input" required></div>
+          <div class="form-group"><label class="form-label">Trip ID (optional)</label><input type="number" name="trip_id" class="form-input"></div>
+          <div class="form-group"><label class="form-label">Vehicle ID (optional)</label><input type="number" name="vehicle_id" class="form-input"></div>
+          <div class="form-group"><label class="form-label">Toll Amount</label><input type="number" step="0.01" name="toll" class="form-input"></div>
+          <div class="form-group"><label class="form-label">Other Amount</label><input type="number" step="0.01" name="other" class="form-input"></div>
           <button type="submit" class="btn btn-primary">Save Expense</button>
         </form>
       `;
       showModal('Add Expense', formHTML, async (e, form) => {
         const fd = new FormData(form);
         const payload = Object.fromEntries(fd.entries());
-        payload.amount = Number(payload.amount);
+        payload.trip_id = payload.trip_id ? Number(payload.trip_id) : null;
+        payload.vehicle_id = payload.vehicle_id ? Number(payload.vehicle_id) : null;
+        payload.toll = Number(payload.toll) || 0;
+        payload.other = Number(payload.other) || 0;
         
         try {
           await apiFetch('/dashboard/expenses', { method: 'POST', body: JSON.stringify(payload) });
@@ -795,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
         vehicle_id: Number(document.getElementById('maintVehicle').value),
         service_type: document.getElementById('maintServiceType').value,
         cost: Number(document.getElementById('maintCost').value),
-        date: document.getElementById('maintDate').value,
+        service_date: document.getElementById('maintDate').value,
         status: document.getElementById('maintStatus').value
       };
       
@@ -809,82 +735,4 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ── Driver Geolocation Tracking ──
-// Uses navigator.geolocation.watchPosition() to POST real coordinates
-// to the backend tracking endpoint when a driver has an active trip.
-let geoWatchId = null;
-let lastGeoSend = 0;
-
-async function startDriverGeoTracking() {
-  if (!navigator.geolocation) {
-    const locEl = document.getElementById('statDriverLocation');
-    if (locEl) locEl.textContent = 'Geolocation not supported';
-    return;
-  }
-
-  // First find the driver's dispatched trip to get vehicle_id
-  try {
-    const trips = await apiFetch('/dashboard/trips');
-    const user = getStoredUser();
-    const activeTrip = trips.find(t =>
-      t.status === 'Dispatched' && t.driver_name === user.name
-    );
-
-    if (!activeTrip || !activeTrip.vehicle_id) {
-      const locEl = document.getElementById('statDriverLocation');
-      if (locEl) locEl.textContent = 'No active trip';
-      return;
-    }
-
-    const vehicleId = activeTrip.vehicle_id;
-
-    geoWatchId = navigator.geolocation.watchPosition(
-      async (position) => {
-        const now = Date.now();
-        // Only send every 10 seconds
-        if (now - lastGeoSend < 10000) return;
-        lastGeoSend = now;
-
-        const { latitude, longitude } = position.coords;
-
-        try {
-          await apiFetch('/tracking', {
-            method: 'POST',
-            body: JSON.stringify({ vehicle_id: vehicleId, latitude, longitude })
-          });
-
-          const locEl = document.getElementById('statDriverLocation');
-          if (locEl) locEl.textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-        } catch (err) {
-          console.error('Failed to send location:', err);
-        }
-      },
-      (err) => {
-        console.error('Geolocation error:', err);
-        const locEl = document.getElementById('statDriverLocation');
-        if (locEl) {
-          switch (err.code) {
-            case err.PERMISSION_DENIED:
-              locEl.textContent = 'Location permission denied';
-              break;
-            case err.POSITION_UNAVAILABLE:
-              locEl.textContent = 'Location unavailable';
-              break;
-            default:
-              locEl.textContent = 'Location error';
-          }
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-    );
-  } catch (err) {
-    console.error('Error setting up geo tracking:', err);
-  }
-}
-
-// Cleanup geo tracking when leaving the page
-window.addEventListener('beforeunload', () => {
-  if (geoWatchId !== null) {
-    navigator.geolocation.clearWatch(geoWatchId);
-  }
-});
+// Removed geo tracking

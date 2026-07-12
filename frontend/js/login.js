@@ -61,4 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('password').value = '';
     }
   });
+
+  // Demo Login Buttons
+  const demoBtns = document.querySelectorAll('.demo-btn');
+  demoBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('email').value = btn.dataset.email;
+      document.getElementById('password').value = btn.dataset.password;
+      form.dispatchEvent(new Event('submit'));
+    });
+  });
 });
