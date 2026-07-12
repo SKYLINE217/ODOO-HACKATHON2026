@@ -52,4 +52,6 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { requireAuth };
+const { requireRole } = require('./rbac');
+
+module.exports = { requireAuth, requireRole };

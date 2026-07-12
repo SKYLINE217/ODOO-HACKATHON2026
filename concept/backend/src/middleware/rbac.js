@@ -19,7 +19,9 @@ const { PERMISSIONS } = require('../constants/permissions');
  *
  * @param  {...string} allowedRoles
  */
-function requireRole(...allowedRoles) {
+function requireRole(...rolesArg) {
+  // Flatten in case Dev A passed an array: requireRole(['fleet_manager', 'driver'])
+  const allowedRoles = Array.isArray(rolesArg[0]) ? rolesArg[0] : rolesArg;
   return (req, res, next) => {
     if (!req.user || !req.user.role) {
       return res.status(401).json({
