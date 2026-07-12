@@ -112,11 +112,7 @@ async function loadDashboardSummary() {
   document.getElementById('statDriversOnDuty').textContent = stats.drivers_on_duty;
   document.getElementById('statFleetUtilization').textContent = `${stats.fleet_utilization}%`;
   
-  // Wire up real geolocation tracking for drivers with active trips
-  const user = getStoredUser();
-  if (user && user.role === 'driver') {
-    startDriverGeoTracking();
-  }
+
 
   const tbody = document.getElementById('recentTripsBody');
   tbody.innerHTML = data.recent_trips.map(t => `
@@ -441,7 +437,7 @@ async function loadProfile() {
       document.getElementById('profileTripsVal').textContent = '1,204';
       document.getElementById('profileRatingVal').textContent = '4.9/5';
       document.getElementById('profileHoursVal').textContent = '1,024h';
-    } else if (user.role === 'driver') {
+    } else if (user.role === 'dispatcher') {
       document.getElementById('profileTripsVal').textContent = '324';
       document.getElementById('profileRatingVal').textContent = '4.8/5';
       document.getElementById('profileHoursVal').textContent = '84h';

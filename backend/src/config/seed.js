@@ -11,10 +11,10 @@ const DEMO_USERS = [
     role: 'fleet_manager'
   },
   {
-    name: 'Raj Patel',
-    email: 'driver@transitops.demo',
+    name: 'Dispatcher Demo',
+    email: 'dispatcher@transitops.demo',
     password: 'password123',
-    role: 'driver'
+    role: 'dispatcher'
   },
   {
     name: 'Safety Officer Demo',

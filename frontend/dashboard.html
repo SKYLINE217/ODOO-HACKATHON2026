@@ -27,22 +27,22 @@
         <a href="#" class="nav-item" data-tab="dashboard" data-roles="fleet_manager" id="nav-dashboard">
           <span class="nav-icon">📊</span> Dashboard
         </a>
-        <a href="#" class="nav-item" data-tab="fleet" data-roles="fleet_manager" id="nav-fleet">
+        <a href="#" class="nav-item" data-tab="fleet" data-roles="fleet_manager,dispatcher,financial_analyst" id="nav-fleet">
           <span class="nav-icon">🚛</span> Fleet
         </a>
-        <a href="#" class="nav-item" data-tab="drivers" data-roles="safety_officer,fleet_manager" id="nav-drivers">
+        <a href="#" class="nav-item" data-tab="drivers" data-roles="fleet_manager,safety_officer" id="nav-drivers">
           <span class="nav-icon">👤</span> Drivers
         </a>
-        <a href="#" class="nav-item" data-tab="trips" data-roles="driver,fleet_manager" id="nav-trips">
+        <a href="#" class="nav-item" data-tab="trips" data-roles="dispatcher,safety_officer" id="nav-trips">
           <span class="nav-icon">🗺️</span> Trips
         </a>
         <a href="#" class="nav-item" data-tab="maintenance" data-roles="fleet_manager" id="nav-maintenance">
           <span class="nav-icon">🔧</span> Maintenance
         </a>
-        <a href="#" class="nav-item" data-tab="fuel" data-roles="financial_analyst,fleet_manager,driver" id="nav-fuel">
+        <a href="#" class="nav-item" data-tab="fuel" data-roles="financial_analyst" id="nav-fuel">
           <span class="nav-icon">⛽</span> Fuel & Expenses
         </a>
-        <a href="#" class="nav-item" data-tab="analytics" data-roles="financial_analyst,fleet_manager" id="nav-analytics">
+        <a href="#" class="nav-item" data-tab="analytics" data-roles="fleet_manager,financial_analyst" id="nav-analytics">
           <span class="nav-icon">📈</span> Analytics
         </a>
         <a href="#" class="nav-item" data-tab="settings" data-roles="fleet_manager" id="nav-settings">
@@ -247,7 +247,7 @@
         <div id="tab-drivers" class="tab-pane">
           <div class="tab-header-row">
             <h2 class="section-title" style="margin: 0;">Drivers & Safety Profiles</h2>
-            <button class="btn btn-accent btn-md" id="addDriverBtn">+ Add Driver</button>
+            <button class="btn btn-accent btn-md" id="addDriverBtn" data-roles="fleet_manager,safety_officer">+ Add Driver</button>
           </div>
 
           <div class="data-table-container">
@@ -310,7 +310,7 @@
 
           <div class="split-layout">
             <!-- Create Trip Form -->
-            <div class="split-left">
+            <div class="split-left" data-roles="dispatcher">
               <h3 class="section-title">CREATE TRIP</h3>
               <form id="createTripForm">
                 <div class="form-group">
@@ -448,8 +448,8 @@
           <div class="tab-header-row">
             <h3 class="section-title" style="margin: 0;">FUEL LOGS</h3>
             <div class="btn-group">
-              <button class="btn btn-green btn-md" id="addFuelBtn">+ Log Fuel</button>
-              <button class="btn btn-accent btn-md" id="addExpenseBtn">+ Add Expense</button>
+              <button class="btn btn-green btn-md" id="addFuelBtn" data-roles="financial_analyst">+ Log Fuel</button>
+              <button class="btn btn-accent btn-md" id="addExpenseBtn" data-roles="financial_analyst">+ Add Expense</button>
             </div>
           </div>
 
